@@ -1,5 +1,5 @@
 /**
- *  MolSmart GW3 Driver - Versão Usando IR MolSmart Database. Versão para controles de TV. 
+ *   MolSmart GW3 Driver - Versão Usando IR MolSmart Database. Versão para controles de TV. 
  *   You must create your remote control template, at http://ir.molsmart.com.br. Then you can import your remote control over by using just the sharing URL. 
  *
  *  Copyright 2024 VH 
@@ -15,18 +15,18 @@
  *
  *
  *            --- Driver para GW3 - IR - para TV ---
- *              V.1.0   5/8/2024 - V1 para trazer os controles remotos. 
+ *              V.1.0   5/8/2024 - V1 para trazer os controles remotos prontos. 
  *
  *
  */
 metadata {
   definition (name: "MolSmart - GW3 - TV (irweb)", namespace: "TRATO", author: "VH", vid: "generic-contact") {
-    capability "TV"  
-    capability "SamsungTV"
-    capability "Switch"  
-    capability "Actuator"
-    capability "PushableButton"
-	capability "Variable"      
+    	capability "TV"  
+    	capability "SamsungTV"
+   	capability "Switch"  
+   	capability "Actuator"
+   	capability "PushableButton"
+   	capability "Variable"      
   
 	attribute "channel", "number"
 	attribute "volume", "number"
@@ -34,6 +34,9 @@ metadata {
 	attribute "power", "string"
 	attribute "sound", "string"
 	attribute "picture", "string"  
+    	attribute "Controle", "string"  
+    	attribute "TipoControle", "string" 
+    	attribute "Formato", "string"       
       
     command "GetRemoteDATA"
     command "cleanvars"  
@@ -74,7 +77,6 @@ metadata {
         //help guide
         input name: "UserGuide", type: "hidden", title: fmtHelpInfo("Manual do Driver") 
         input name: "SiteIR", type: "hidden", title: fmtHelpInfo1("Site IR MolSmart") 
-
         input name: "webserviceurl", title:"URL Do Controle Remoto", type: "string"
 
   }   
@@ -98,10 +100,13 @@ def GetRemoteDATA()
     try {
         httpGet(params) { resp ->
             if (resp.success) {                
-                sendEvent(name: "GetRemoteData", value: "sucess")
+                sendEvent(name: "GetRemoteData", value: "Sucess")
                 //log.debug "RESULT = " + resp.data
-                //state.jsondata = resp.data
-                    
+      
+    sendEvent(name: "Controle", value: resp.data.name)   
+    sendEvent(name: "TipoControle", value: resp.data.type)   
+    sendEvent(name: "Formato", value: resp.data.conversor)                   
+                
     state.encoding = resp.data.conversor
     state.OFFIRsend  = resp.data.functions.function[0]
     state.OnIRsend  = resp.data.functions.function[1]
@@ -155,26 +160,22 @@ def GetRemoteDATA()
     state.smarthubIRsend  = resp.data.functions.function[49] 
     state.previouschannelIRsend  = resp.data.functions.function[50] 
     state.backIRsend  = resp.data.functions.function[51]
-
-                
+             
     }
             
-        }
+	}
     } catch (Exception e) {
-        log.warn "Call to lock failed: ${e.message}"
-    }
-    
+        log.warn "Get Remote Control Info failed: ${e.message}"
+    }    
 
 }
 
-
-def cleanvars()
+def cleanvars()  //Usada para limpar todos os states e controles aprendidos. 
 {
 //state.remove()
   state.clear() 
   AtualizaDadosGW3()  
 }
-
 
 def installed()
 {   
@@ -182,8 +183,7 @@ def installed()
 }
 
 def updated()
-{
-   
+{ 
     sendEvent(name:"numberOfButtons", value:60)    
     log.debug "updated()"
     AtualizaDadosGW3()  
@@ -201,9 +201,7 @@ def AtualizaDadosGW3() {
 }
 
 
-
-
-//Basico on e off para Switch 
+//Basico on / off para Switch 
 def on() {
      sendEvent(name: "switch", value: "on", isStateChange: true)
      def ircode =  state.OnIRsend   
@@ -230,41 +228,41 @@ def push(pushed) {
 	pushed = pushed.toInteger()
 	switch(pushed) {
         case 0 : poweroff(); break
-		case 1 : poweron(); break
+	case 1 : poweron(); break
         case 2 : mute(); break
-		case 3 : source(); break
-		case 4 : back(); break
+	case 3 : source(); break
+	case 4 : back(); break
         case 5 : menu(); break
         case 6 : hdmi1(); break
         case 7 : hdmi2(); break                
-		case 8 : left(); break
-		case 9 : right(); break
-		case 10: up(); break
-		case 11: down(); break
-		case 12: confirm(); break
-		case 13: exit(); break
-		case 14: home(); break
-		case 18: channelUp(); break
-		case 19: channelDown(); break
-		case 21: volumeUp(); break
-		case 22: volumeDown(); break
-		case 23: num0(); break
-		case 24: num1(); break
-		case 25: num2(); break
-		case 26: num3(); break
-    	case 27: num4(); break        
-		case 28: num5(); break
-    	case 29: num6(); break
-	    case 30: num7(); break
-    	case 31: num8(); break            
-	    case 32: num9(); break   
-	    case 33: btnextra1(); break                
-		case 34: btnextra2(); break
-		case 35: btnextra3(); break
-		case 38: appAmazonPrime(); break
-		case 39: appYouTube(); break
-		case 40: appNetflix(); break    
-		case 41: btnextra4(); break    
+	case 8 : left(); break
+	case 9 : right(); break
+	case 10: up(); break
+	case 11: down(); break
+	case 12: confirm(); break
+	case 13: exit(); break
+	case 14: home(); break
+	case 18: channelUp(); break
+	case 19: channelDown(); break
+	case 21: volumeUp(); break
+	case 22: volumeDown(); break
+	case 23: num0(); break
+	case 24: num1(); break
+	case 25: num2(); break
+	case 26: num3(); break
+	case 27: num4(); break        
+	case 28: num5(); break
+	case 29: num6(); break
+	case 30: num7(); break
+	case 31: num8(); break            
+	case 32: num9(); break   
+	case 33: btnextra1(); break                
+	case 34: btnextra2(); break
+	case 35: btnextra3(); break
+	case 38: appAmazonPrime(); break
+	case 39: appYouTube(); break
+	case 40: appNetflix(); break    
+	case 41: btnextra4(); break    
         case 42: btnextra5(); break    
         case 43: btnextra6(); break    
         case 44: btnextra7(); break    
@@ -283,8 +281,8 @@ def push(pushed) {
         case 57: backIRsend(); break        
          
         default:
-			logDebug("push: Botão inválido.")
-			break
+		logDebug("push: Botão inválido.")
+		break
 	}
 }
 
@@ -304,7 +302,7 @@ def poweron(){
 
 //Botão #2 para dashboard
 def mute(){
-	sendEvent(name: "volume", value: "mute")
+	sendEvent(name: "action", value: "mute")
     def ircode =  state.muteIRsend
     EnviaComando(ircode)    
 }
@@ -420,14 +418,14 @@ def channelDown(){
 
 //Botão #21 para dashboard
 def volumeUp(){
-	sendEvent(name: "volume", value: "volup")
+	sendEvent(name: "action", value: "volup")
     def ircode = state.VolUpIRsend
     EnviaComando(ircode)    
 }
 
 //Botão #22 para dashboard
 def volumeDown(){
-	sendEvent(name: "volume", value: "voldown")
+	sendEvent(name: "action", value: "voldown")
     def ircode = state.VolDownIRsend
     EnviaComando(ircode)    
 }
