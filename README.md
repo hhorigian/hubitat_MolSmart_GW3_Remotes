@@ -23,59 +23,107 @@ Driver para usar Controles Remotos criados no http://ir.molsmart.com.br.
 
 
 - Pode usar o Device, pode usar como Botões no seu dashboard. Adicionar o device no dashboard. Embaixo a relação e numeros para cada botão. 
-   
 
-	  case 0 : poweroff(); break
-		case 1 : poweron(); break
-		case 2 : mute(); break
-		case 3 : source(); break
-		case 4 : back(); break
-		case 5 : menu(); break
-		case 6 : hdmi1(); break
-		case 7 : hdmi2(); break
-		case 8 : left(); break
-		case 9 : right(); break
-		case 10: up(); break
-		case 11: down(); break
-		case 12: confirm(); break
-		case 13: exit(); break
-		case 14: home(); break
-		case 18: channelUp(); break
-		case 19: channelDown(); break
-		case 21: volumeUp(); break
-		case 22: volumeDown(); break
-		case 23: num0(); break
-		case 24: num1(); break
-		case 25: num2(); break
-		case 26: num3(); break
-		case 27: num4(); break
-		case 28: num5(); break
-		case 29: num6(); break
-		case 30: num7(); break
-		case 31: num8(); break
-		case 32: num9(); break
-		case 33: btnextra1(); break
-		case 34: btnextra2(); break
-		case 35: btnextra3(); break
-		case 38: appAmazonPrime(); break
-		case 39: appYouTube(); break
-		case 40: appNetflix(); break
-		case 41: btnextra4(); break
-		case 42: btnextra5(); break
-		case 43: btnextra6(); break
-		case 44: btnextra7(); break
-		case 45: btnAIRsend(); break
-		case 46: btnBIRsend(); break
-		case 47: btnCIRsend(); break
-		case 48: btnDIRsend(); break
-		case 49: playIRsend(); break
-		case 50: pauseIRsend(); break
-		case 51: nextIRsend(); break
-		case 52: guideIRsend(); break
-		case 53: infoIRsend(); break
-		case 54: toolsIRsend(); break
-		case 55: smarthubIRsend(); break
-		case 56: previouschannelIRsend(); break
-		case 57: backIRsend(); break
+# Relação de botões para Controles de TV   
 
+	 	Botão 0 : poweroff
+		Botão 1 : poweron
+		Botão 2 : mute
+		Botão 3 : source
+		Botão 4 : back
+		Botão 5 : menu
+		Botão 6 : hdmi1
+		Botão 7 : hdmi2
+		Botão 8 : left
+		Botão 9 : right
+		Botão 10: up
+		Botão 11: down
+		Botão 12: confirm
+		Botão 13: exit
+		Botão 14: home
+		Botão 18: channelUp
+		Botão 19: channelDown
+		Botão 21: volumeUp
+		Botão 22: volumeDown
+		Botão 23: num0
+		Botão 24: num1
+		Botão 25: num2
+		Botão 26: num3
+		Botão 27: num4
+		Botão 28: num5
+		Botão 29: num6
+		Botão 30: num7
+		Botão 31: num8
+		Botão 32: num9
+		Botão 33: btnextra1
+		Botão 34: btnextra2
+		Botão 35: btnextra3
+		Botão 38: appAmazonPrime
+		Botão 39: appYouTube
+		Botão 40: appNetflix
+		Botão 41: btnextra4
+		Botão 42: btnextra5
+		Botão 43: btnextra6
+		Botão 44: btnextra7
+		Botão 45: btnAIRsend
+		Botão 46: btnBIRsend
+		Botão 47: btnCIRsend
+		Botão 48: btnDIRsend
+		Botão 49: playIRsend
+		Botão 50: pauseIRsend
+		Botão 51: nextIRsend
+		Botão 52: guideIRsend
+		Botão 53: infoIRsend
+		Botão 54: toolsIRsend
+		Botão 55: smarthubIRsend
+		Botão 56: previouschannelIRsend
+		Botão 57: backIRsend
 
+# Relação de botões para Controles de Ar Condicionado   
+
+		Botão 0 : poweroff
+		Botão 1 : poweron
+		Botão 2 : auto
+		Botão 3 : heat
+		Botão 4 : cool
+        	Botão 5 : fan
+       		Botão 6 : dry
+        	Botão 7 : setautocool                
+        	Botão 8 : comandoextra1    
+        	Botão 9 : comandoextra2            
+        	Botão 10 : comandoextra3            
+        	Botão 11 : comandoextra4    
+        	Botão 12 : comandoextra5    
+        	Botão 13 : fanAuto    
+        	Botão 14 : fanLow    
+        	Botão 15 : fanMed    
+       		Botão 16 : fanHigh   
+        	Botão 17 : comandoextra6  
+        	Botão 18 : comandoextra7  
+        	Botão 19 : comandoextra8   
+		Botão 20 : fastcold
+		Botão 21 : temp18
+		Botão 22 : temp20
+		Botão 23 : temp22
+		Botão 24 : clock
+		Botão 25 : sweep
+		Botão 26 : turbo
+		Botão 27 : fan
+		Botão 28 : temp17
+		Botão 29 : temp23
+		Botão 30 : temp26
+		Botão 31 : onoff
+		Botão 32 : temp19
+		Botão 33 : temp21
+		Botão 34 : swing
+		Botão 35 : manual
+		Botão 36 : mode
+		Botão 37 : up
+		Botão 38 : timer
+		Botão 39 : cancel
+		Botão 40 : down
+		Botão 41 : display
+		Botão 42 : io
+		Botão 43 : tempup
+		Botão 44 : tempdown
+		Botão 45 : fanspeed
