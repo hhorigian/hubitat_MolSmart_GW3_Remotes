@@ -16,12 +16,13 @@
  *
  *            --- Driver para GW3 - IR - para TV ---
  *              V.1.0   5/8/2024 - V1 para trazer os controles remotos prontos. 
+  *              V.1.1   20/8/2024 - Added Commands, removed switch capability. 
  *
  *
  */
 metadata {
   definition (name: "MolSmart - GW3 - AC (irweb)", namespace: "TRATO", author: "VH", vid: "generic-contact") {
-  capability "Switch"
+  // capability "Switch"
 	capability "Thermostat"
 	capability "Thermostat Cooling Setpoint"
 	capability "Thermostat Setpoint"
@@ -42,11 +43,58 @@ metadata {
       
   command "GetRemoteDATA"
   command "cleanvars"   //command to clean all variables and states. For debug only. 
+
+command "poweroff"
+command "poweron"
+command "auto"
+command "heat"
+command "cool"
+command "fan"
+command "dry"
+command "setautocool"
+command "comandoextra1"
+command "comandoextra2"
+command "comandoextra3"
+command "comandoextra4"
+command "comandoextra5"
+command "fanAuto"
+command "fanLow"
+command "fanMed"
+command "fanHigh"   
+command "comandoextra6"  
+command "comandoextra7"  
+command "comandoextra8"   
+command "fastcold"
+command "temp18"
+command "temp20"
+command "temp22"
+command "clock"
+command "sweep"
+command "turbo"
+command "fan"
+command "temp17"
+command "temp23"
+command "temp26"
+command "onoff"
+command "temp19"
+command "temp21"
+command "swing"
+command "manual"
+command "mode"
+command "up"
+command "timer"
+command "cancel"
+command "down"
+command "display"
+command "io"
+command "tempup"
+command "tempdown"
+command "fanspeed"	  
+
+	  
   }
-      
-      
 
-
+	
 }
 
     import groovy.transform.Field
