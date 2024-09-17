@@ -1,0 +1,18 @@
+{
+   "packageName":"MolSmart - GW3 - TV (irweb)",
+   "author":"VH",
+   "version":"1.1",
+   "minimumHEVersion":"2.3.7.100",
+   "dateReleased":"2024-09-17",
+   "releaseNotes":"First Version",
+   "documentationLink":"https://github.com/hhorigian/hubitat_MolSmart_GW3_Remotes",
+   "drivers": [
+    {
+       "id":"50237179-00cc-4f1f-907c-48eff2983814",
+       "name":"MolSmart - GW3 - TV (irweb)",
+       "namespace":"TRATO",
+       "location":"https://github.com/hhorigian/hubitat_MolSmart_GW3_Remotes/blob/main/MolSmart_GW3_TV_(irweb).groovy",
+       "required":true
+    }
+    ]
+  }
