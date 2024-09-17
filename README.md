@@ -4,7 +4,7 @@ Driver para usar Controles Remotos criados no http://ir.molsmart.com.br.
 
 1. Criar o seu usuário e senha no http://ir.molsmart.com.br.
 2. Criar um novo, ou importar um controle remoto compartilhado.
-3. Instalar o Driver na sua Hubitat.
+3. Instalar o Driver manualmente na sua Hubitat (irweb para AC ou irweb para TV) .
 4. Criar um Virtual Device, do tipo "MolSmart - GW3 - TV (irweb)" / MolSmart - GW3 - SOM (irweb) / MolSmart - GW3 - AC (irweb)"
 5. Inserir todos os dados do seu MolSmart GW3 (Ip, verifycode, numero de serie).
 6. Voltar para o Site do Controle IR, e copiar o endereço URL do controle remoto para compartir. (ex: https://molsmart-integration.web.app/controle-integration?token=e7eca569-67a8-4176-9ebc-b6d6d84892b7ó ) - sem acentos. 
