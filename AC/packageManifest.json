@@ -11,7 +11,7 @@
        "id":"1321399e-cbdc-481d-892a-a10a6082f201",
        "name":"MolSmart - GW3 - AC (irweb)",
        "namespace":"TRATO",
-       "location":"https://github.com/hhorigian/hubitat_MolSmart_GW3_Remotes/blob/main/AC/MolSmart_GW3_AC_(irweb).groovy",
+       "location":"https://raw.githubusercontent.com/hhorigian/hubitat_MolSmart_GW3_Remotes/main/AC/MolSmart_GW3_AC_(irweb).groovy",
        "required":true
     }
     ]
