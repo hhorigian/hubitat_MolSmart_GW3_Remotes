@@ -11,7 +11,7 @@
        "id":"50237179-00cc-4f1f-907c-48eff2983814",
        "name":"MolSmart - GW3 - TV (irweb)",
        "namespace":"TRATO",
-       "location":"https://github.com/hhorigian/hubitat_MolSmart_GW3_Remotes/blob/main/MolSmart_GW3_TV_(irweb).groovy",
+       "location":"https://github.com/hhorigian/hubitat_MolSmart_GW3_Remotes/blob/main/TV/MolSmart_GW3_TV_(irweb).groovy",
        "required":true
     }
     ]
