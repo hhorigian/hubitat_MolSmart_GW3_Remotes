@@ -14,8 +14,8 @@
  *
  *
  *            --- Driver para GW3 - AC - idoor
- *            V.1.1 30/05/2024 - Removed the APP file. Only Driver File. 
- *            V.1.2 13/06/2024 - Added User Guide link 
+ *            V.1.1 17/09/2024 - Removed the APP file. Only Driver File. 
+ *            V.1.2 20/09/2024 - Added User Guide link 
   *           V.1.3 17/10/2024 - Fixed AC links to IR Web Remote Links 
  *
  */
