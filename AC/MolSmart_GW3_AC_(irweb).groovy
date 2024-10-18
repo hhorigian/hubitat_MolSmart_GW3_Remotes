@@ -298,8 +298,6 @@ def off() {
 }
 
 
-
-
 //Case para os botões se usar no Dashboard 
 def push(pushed) {
 	logDebug("push: button = ${pushed}")
@@ -307,62 +305,61 @@ def push(pushed) {
 		logWarn("push: pushed is null.  Input ignored")
 		return
 	}
-	pushed = pushed.toInteger()
+	//pushed = pushed.toInteger()
 	switch(pushed) {
-	case 0 : poweroff(); break
-	case 1 : poweron(); break
-	case 2 : auto(); break
-	case 3 : heat(); break
-	case 4 : cool(); break
-    case 5 : fan(); break
-    case 6 : dry(); break
-    case 7 : setautocool(); break                
-    case 8 : comandoextra1(); break    
-    case 9 : comandoextra2(); break            
-    case 10 : comandoextra3(); break            
-    case 11 : comandoextra4(); break    
-    case 12 : comandoextra5(); break    
-    case 13 : fanAuto(); break    
-    case 14 : fanLow(); break    
-    case 15 : fanMed(); break    
-    case 16 : fanHigh(); break   
-    case 17 : comandoextra6(); break  
-    case 18 : comandoextra7(); break  
-    case 19 : comandoextra8(); break   
-	case 20 : fastcold(); break
-	case 21 : temp18(); break
-	case 22 : temp20(); break
-	case 23 : temp22(); break
-	case 24 : clock(); break
-    case 25 : sweep(); break
-    case 26 : turbo(); break
-    case 27 : fan(); break
-    case 28 : temp17(); break
-    case 29 : temp23(); break
-    case 30 : temp26(); break
-    case 31 : onoff(); break
-    case 32 : temp19(); break
-    case 33 : temp21(); break
-    case 34 : swing(); break
-    case 35 : manual(); break
-    case 36 : mode(); break
-    case 37 : up(); break
-    case 38 : timer(); break
-    case 39 : cancel(); break
-    case 40 : down(); break
-    case 41 : display(); break
-    case 42 : io(); break
-    case 43 : tempup(); break
-    case 44 : tempdown(); break
-    case 45 : fanspeed(); break
+	case "0" : poweroff(); break
+	case "1" : poweron(); break
+	case "2" : auto(); break
+	case "3" : heat(); break
+	case "4" : cool(); break
+    case "5" : fan(); break
+    case "6" : dry(); break
+    case "7" : setautocool(); break                
+    case "8" : comandoextra1(); break    
+    case "9" : comandoextra2(); break            
+    case "10" : comandoextra3(); break            
+    case "11" : comandoextra4(); break    
+    case "12" : comandoextra5(); break    
+    case "13" : fanAuto(); break    
+    case "14" : fanLow(); break    
+    case "15" : fanMed(); break    
+    case "16" : fanHigh(); break   
+    case "17" : comandoextra6(); break  
+    case "18" : comandoextra7(); break  
+    case "19" : comandoextra8(); break   
+	case "20" : fastcold(); break
+	case "21" : temp18(); break
+	case "22" : temp20(); break
+	case "23" : temp22(); break
+	case "24" : clock(); break
+    case "25" : sweep(); break
+    case "26" : turbo(); break
+    case "27" : fan(); break
+    case "28" : temp17(); break
+    case "29" : temp23(); break
+    case "30" : temp26(); break
+    case "31" : onoff(); break
+    case "32" : temp19(); break
+    case "33" : temp21(); break
+    case "34" : swing(); break
+    case "35" : manual(); break
+    case "36" : mode(); break
+    case "37" : up(); break
+    case "38" : timer(); break
+    case "39" : cancel(); break
+    case "40" : down(); break
+    case "41" : display(); break
+    case "42" : io(); break
+    case "43" : tempup(); break
+    case "44" : tempdown(); break
+    case "45" : fanspeed(); break
 		
 		default:
-			logDebug("push: Botão inválido.")
+           "${pushed}"()
+			//logDebug("push: Botão inválido.")
 			break
 	}
 }
-
-
 
 //Botão #0 para dashboard
 def poweroff(){
