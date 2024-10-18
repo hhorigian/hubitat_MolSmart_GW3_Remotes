@@ -1,6 +1,7 @@
 /**
- *  MolSmart GW3 Driver - AC - iDoor (usando os códigos e controles do idoor)
- *
+*   MolSmart GW3 Driver - Versão Usando IR MolSmart Database. Versão para controles de AC. 
+*   You must create your remote control template, at http://ir.molsmart.com.br. Then you can import your remote control over by using just the sharing URL. 
+*
  *  Copyright 2024 VH 
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
