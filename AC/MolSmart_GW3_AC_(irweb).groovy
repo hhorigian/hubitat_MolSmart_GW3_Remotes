@@ -16,7 +16,7 @@
  *
  *            --- Driver para GW3 - IR - para AC ---
  *              V.1.0   17/09/2024 - V1 para trazer os controles remotos prontos. 
-  *             V.1.1   17/10/2024 - Added Commands, removed switch capability. 
+  *             V.1.1   17/10/2024 - Fixed Links for AC
  *
  *
  */
