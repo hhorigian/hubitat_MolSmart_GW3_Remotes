@@ -17,6 +17,7 @@
  *            --- Driver para GW3 - IR - para AC ---
  *              V.1.0   17/09/2024 - V1 para trazer os controles remotos prontos. 
   *             V.1.1   17/10/2024 - Fixed Links for AC
+  *             V.1.2   04/11/2024 - Added setCoolingSetpoint, setHeatingSetpoint for API commands
  *
  *
  */
@@ -189,7 +190,7 @@ state.temp22 = resp.data.functions.function[23]
 state.clock = resp.data.functions.function[24]
 state.sweep = resp.data.functions.function[25]
 state.turbo = resp.data.functions.function[26]
-state.fan = resp.data.functions.function[27]
+state.fan2 = resp.data.functions.function[27]
 state.temp17 = resp.data.functions.function[28]
 state.temp23 = resp.data.functions.function[29]
 state.temp26 = resp.data.functions.function[30]
@@ -198,7 +199,7 @@ state.temp19 = resp.data.functions.function[32]
 state.temp21 = resp.data.functions.function[33]
 state.swing = resp.data.functions.function[34]
 state.manual = resp.data.functions.function[35]
-state.operation mode = resp.data.functions.function[35]
+state.operationmode = resp.data.functions.function[36]
 state.up = resp.data.functions.function[37]
 state.timer = resp.data.functions.function[38]
 state.cancel = resp.data.functions.function[39]
@@ -208,7 +209,7 @@ state.io = resp.data.functions.function[42]
 state.tempup = resp.data.functions.function[43]
 state.tempdown = resp.data.functions.function[44]
 state.fanspeed = resp.data.functions.function[45]
-         
+        
 
     
     }
@@ -361,11 +362,13 @@ def push(pushed) {
 	}
 }
 
+
 //Botão #0 para dashboard
 def poweroff(){
     sendEvent(name: "thermostatMode", value: "off", descriptionText: "Thermostat Mode set to off", isStateChange: true)
     def ircode =  state.poweroff
     EnviaComando(ircode)    
+
 }
 
 //Botão #1 para dashboard
@@ -694,6 +697,117 @@ def fanspeed(){
 }
 
 
+def setCoolingSetpoint(temperature) {    
+    if (device.currentValue("thermostatMode") == "cool") {               
+        logInfo "Colocando a temp em  ${temperature}"  
+        def previousTempCool = device.currentValue("coolingSetpoint")
+        
+        if (previousTempCool <= temperature) {
+            tempup()
+            sendEvent(name: "setCoolingSetpoint", value: temperature )
+            logInfo "Aumentando a temp"
+        } else {
+            sendEvent(name: "setCoolingSetpoint", value: temperature )
+            tempdown()
+            logInfo "Diminuindo a temp"
+        }
+    } else {
+        log.warn "Sem alterar a temp para  ${temperature}, porque o modo atual é ${device.currentValue("thermostatMode")}"
+    }
+}
+
+def setHeatingSetpoint(temperature) {    
+    if (device.currentValue("thermostatMode") == "heat") {               
+        logInfo "Colocando a temp em  ${temperature}"  
+        def previousTempHeat = device.currentValue("heatingSetpoint")
+        
+        if (previousTempHeat <= temperature) {
+            tempup()
+            sendEvent(name: "setHeatingSetpoint", value: temperature )
+            logInfo "Aumentando a temp"
+        } else {
+            sendEvent(name: "setHeatingSetpoint", value: temperature )
+            tempdown()
+            logInfo "Diminuindo a temp"
+        }
+    } else {
+        log.warn "Sem alterar a temp para  ${temperature}, porque o modo atual é ${device.currentValue("thermostatMode")}"
+    }
+}
+
+
+def setThermostatFanMode(fanmode) {
+    switch(fanmode) {
+        case "on":
+            fan()
+            break
+        case "circulate":
+            //
+            break
+        case "auto":
+            //
+            break
+        case "quiet":
+            //
+            break
+        case "1":
+            fanLow()
+            break
+        case "2":
+            fanMed()
+            break
+        case "3":
+            fanHigh()
+            break        
+        case "4":
+            //
+            break
+        default:
+            log.warn "Unknown fan mode ${fanmode}"
+            break
+    }
+}
+
+
+def convertCelciusToLocalTemp(temp) {
+    return (location.temperatureScale == "F") ? ((temp * 1.8) + 32) : temp
+}
+
+def convertLocalToCelsiusTemp(temp) {
+    return (location.temperatureScale == "F") ? Math.round((temp - 32) / 1.8) : temp
+}
+
+
+
+def setThermostatMode(thermostatmode) {
+    switch(thermostatmode) {
+        case "auto":
+            auto()
+            break
+        case "off":
+            off()
+            break
+        case "heat":
+            heat()
+            break
+        case "emergency heat":
+            emergencyHeat()
+            break
+        case "cool":
+            cool()
+            break
+        case "fan":
+            fan()
+            break
+        case "dry":
+            dry()
+            break
+        default:
+            log.warn "Unknown mode ${thermostatmode}"
+            break
+    }
+}
+
       
 
 def EnviaComando(command) {    
@@ -761,6 +875,11 @@ def info(msg) {
         log.info(msg)
     }
 }
+
+def logInfo(msg) {
+    if (logEnable) log.info msg
+}
+
 
 
 //DEBUG
