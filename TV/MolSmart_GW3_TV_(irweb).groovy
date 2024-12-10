@@ -17,6 +17,7 @@
  *            --- Driver para GW3 - IR - para TV ---
  *              V.1.0   5/8/2024 - V1 para trazer os controles remotos prontos. 
  *              V.1.1   20/8/2024 - Added the commands for each function. 
+ *              V.1.2   10/12/2024 - Fixed poweroff. 
  *
  *
  */
@@ -281,7 +282,6 @@ def push(pushed) {
 	}
 	pushed = pushed.toInteger()
 	switch(pushed) {
-        case 0 : poweroff(); break
 	case 1 : poweron(); break
         case 2 : mute(); break
 	case 3 : source(); break
@@ -332,7 +332,9 @@ def push(pushed) {
         case 54: toolsIRsend(); break 
         case 55: smarthubIRsend(); break 
         case 56: previouschannelIRsend(); break 
-        case 57: backIRsend(); break        
+        case 57: backIRsend(); break  
+        case 58: poweroff(); break
+		
          
         default:
 		logDebug("push: Botão inválido.")
