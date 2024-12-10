@@ -26,7 +26,6 @@ Driver para usar Controles Remotos criados no http://ir.molsmart.com.br.
 
 # Relação de botões para Controles de TV   
 
-	 	Botão 0 : poweroff
 		Botão 1 : poweron
 		Botão 2 : mute
 		Botão 3 : source
@@ -78,11 +77,11 @@ Driver para usar Controles Remotos criados no http://ir.molsmart.com.br.
 		Botão 55: smarthubIRsend
 		Botão 56: previouschannelIRsend
 		Botão 57: backIRsend
+  	 	Botão 58: poweroff
+
 
 # Relação de botões para Controles de Ar Condicionado   
 
-		Botão 0 : poweroff
-		Botão 1 : poweron
 		Botão 2 : auto
 		Botão 3 : heat
 		Botão 4 : cool
@@ -127,3 +126,6 @@ Driver para usar Controles Remotos criados no http://ir.molsmart.com.br.
 		Botão 43 : tempup
 		Botão 44 : tempdown
 		Botão 45 : fanspeed
+		Botão 46 : poweroff
+		Botão 47 : poweron
+  
