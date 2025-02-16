@@ -16,8 +16,8 @@
  *
  *            --- Driver para GW3 - IR - para TV ---
  *              V.1.0   5/8/2024 - V1 para trazer os controles remotos prontos. 
- *              V.1.3   10/12/2024 - Fixes. Ez Dashboard compat.  
- 
+ *              V.1.1   10/12/2024 - Fixes. Ez Dashboard compat.  
+ *              V.1.2   16/02/2025 - Fixes. Refereh IP.   
  *
  */
 metadata {
@@ -26,14 +26,15 @@ metadata {
 		capability "Sensor"
 		capability "Temperature Measurement"
 		capability "Thermostat"
-   		 capability "PushableButton"
+  		capability "PushableButton"
 
 		attribute "supportedThermostatFanModes", "JSON_OBJECT"
 		attribute "supportedThermostatModes", "JSON_OBJECT"	  
 		attribute "hysteresis", "NUMBER"
 
     command "GetRemoteDATA"
-    command "cleanvars"  
+    command "cleanvars"
+    command "AtualizaDadosGW3"
   }
       
       
@@ -69,7 +70,9 @@ metadata {
     	input name: "serialNum", title:"Numero de serie (Etiqueta GW3)", type: "string", required: true
 	    input name: "verifyCode", title:"Verify code (Etiqueta GW3)", type: "string", required: true
 	    input name: "channel", title:"Canal Infravermelho (1/2 ou 3)", type: "string", required: true        
-	  
+        input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false
+
+      
         //help guide
         input name: "UserGuide", type: "hidden", title: fmtHelpInfo("Manual do Driver") 
         input name: "SiteIR", type: "hidden", title: fmtHelpInfo1("Site IR MolSmart") 
@@ -112,10 +115,12 @@ def GetRemoteDATA()
                 sendEvent(name: "GetRemoteData", value: "Sucess")
                 //log.debug "RESULT = " + resp.data
       
-    sendEvent(name: "Controle", value: resp.data.name)   
-    sendEvent(name: "TipoControle", value: resp.data.type)   
-    sendEvent(name: "Formato", value: resp.data.conversor)  
-
+sendEvent(name: "Controle", value: resp.data.name)   
+sendEvent(name: "TipoControle", value: resp.data.type)   
+sendEvent(name: "Formato", value: resp.data.conversor)  
+log.info "Controle: " + resp.data.name
+log.info "TipoControle: " +     resp.data.type    
+                
 state.encoding = resp.data.conversor			 		
 state.poweroff = resp.data.functions.function[0]
 state.poweron = resp.data.functions.function[1]
@@ -196,9 +201,10 @@ def installed()
 def updated()
 {  
     log.debug "updated()"
+	initialize()
     AtualizaDadosGW3()   
-	if (logEnable) runIn(1800,logsOff)
-	initialize()		
+	//if (logEnable) runIn(1800,logsOff)
+		
 }
 
 
@@ -983,4 +989,13 @@ private getDescriptionText(msg) {
 	def descriptionText = "${device.displayName} ${msg}"
 	if (settings?.txtEnable) log.info "${descriptionText}"
 	return descriptionText
+}
+
+
+def logsOff() {
+    log.warn 'logging disabled...'
+    device.updateSetting('logInfo', [value:'false', type:'bool'])
+    device.updateSetting('logWarn', [value:'false', type:'bool'])
+    device.updateSetting('logDebug', [value:'false', type:'bool'])
+    device.updateSetting('logTrace', [value:'false', type:'bool'])
 }
