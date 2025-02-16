@@ -17,7 +17,7 @@
  *            --- Driver para GW3 - IR - para TV ---
  *              V.1.0   5/8/2024 - V1 para trazer os controles remotos prontos. 
  *              V.1.1   10/12/2024 - Fixes. Ez Dashboard compat.  
- *              V.1.2   16/02/2025 - Fixes. Refereh IP.   
+ *              V.1.2   16/02/2025 - Fixes. Refresh IP.   
  *
  */
 metadata {
