@@ -1,10 +1,10 @@
 {
    "packageName":"MolSmart - GW3 - AC (irweb)",
    "author":"VH",
-   "version":"1.4",
+   "version":"1.5",
    "minimumHEVersion":"2.3.7.100",
-   "dateReleased":"2025-02-16",
-   "releaseNotes":"Fixes. Refresh IP.  ",
+   "dateReleased":"2025-08-19",
+   "releaseNotes":"Fixes. Do not update if not needed ",
    "documentationLink":"https://github.com/hhorigian/hubitat_MolSmart_GW3_Remotes",
    "drivers": [
     {
