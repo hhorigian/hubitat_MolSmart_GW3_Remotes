@@ -1,7 +1,12 @@
 /**
  *   MolSmart GW3 Driver - Versão Usando IR MolSmart Database. Versão para controles de AC. 
  *   You must create your remote control template, at http://ir.molsmart.com.br. Then you can import your remote control over by using just the sharing URL. 
- *
+ *   
+ *   
+ *	If you want to add any specific AC Methods, that can be done in the SetThermostatModes, or SetThermostatFanModes. This specific driver has as default 
+ *  the Heat/Cool/Off for Thermostats, and NO option for Fan Speed (set to AUTO). 
+ *   
+ *   
  *  Copyright 2024 VH 
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -14,33 +19,81 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *
- *            --- Driver para GW3 - IR - para TV ---
+ *            --- Driver para GW3 - IR - para AC --- usando os controles do ir.molsmart.com.br
+ *
  *              V.1.0   5/8/2024 - V1 para trazer os controles remotos prontos. 
  *              V.1.1   10/12/2024 - Fixes. Ez Dashboard compat.  
- *              V.1.3   -  
+ *              V.1.3   10/01/2025 - Bug fixes 
  *              V.1.4   16/02/2025 - Fixes. Refresh IP.   
- *
+ *				V.1.5	19/08/2025
+ *						- replaced the setThermostatFanMode with an option to NOT show fan mode in UI. 
+ * 						- added setdefaults
+ * 						- fixed the temp up / temp down to use the existing values in State variables, or if not found, then use the temp values in cool, or heat 
+ * 						- added the heattemp25..heattemp30 variables which are using the values stored in commandoextra1..comandoextra6
  */
 metadata {
   definition (name: "MolSmart - GW3 - AC (irweb)", namespace: "TRATO", author: "VH", vid: "generic-contact") {
 		capability "Actuator"
-		capability "Sensor"
+  		capability "PushableButton"
+      	capability "Sensor"
 		capability "Temperature Measurement"
 		capability "Thermostat"
-  		capability "PushableButton"
+		capability "Thermostat Cooling Setpoint"
+		capability "Thermostat Setpoint"
 
 		attribute "supportedThermostatFanModes", "JSON_OBJECT"
 		attribute "supportedThermostatModes", "JSON_OBJECT"	  
 		attribute "hysteresis", "NUMBER"
 
-    command "GetRemoteDATA"
-    command "cleanvars"
-    command "AtualizaDadosGW3"
-  }
+      
+command "GetRemoteDATA"
+command "AtualizaDadosGW3"
+command "cleanvars"
+command "clearTemps"
+command "createTemps"      
+command "setSupportedThermostatFanModes", ["JSON_OBJECT"]
+command "setSupportedThermostatModes", ["JSON_OBJECT"]
+command "setTemperature", ["NUMBER"]   
       
       
-
-
+command "poweroff"
+command "poweron"
+command "auto"
+command "heat"
+command "cool"
+command "fan"
+command "heattemp25"
+command "heattemp26"
+command "heattemp27"
+command "heattemp28"
+command "heattemp29"
+command "heattemp30" 
+command "fanAuto"
+command "fanHigh"    
+command "comandoextra7"  
+command "comandoextra8"   
+command "sweep"
+command "turbo"
+command "fan"
+command "temp17"
+command "temp18"
+command "temp19"
+command "temp20"
+command "temp21"
+command "temp22"
+command "temp23"
+command "temp24"
+command "temp25"      
+command "onoff"
+command "swing"
+command "mode"
+command "timer"
+command "tempup"
+command "tempdown"
+command "fanspeed"	 
+command "setdefaults"      
+      
+  }      
 }
 
     import groovy.transform.Field
@@ -82,26 +135,6 @@ metadata {
   }   
   
 
-def initialize() {
-	log.debug "initialized()"  
-    sendEvent(name:"numberOfButtons", value:60)  		
-	if (state?.lastRunningMode == null) {
-		sendEvent(name: "temperature", value: convertTemperatureIfNeeded(68.0,"F",1))
-		sendEvent(name: "thermostatSetpoint", value: convertTemperatureIfNeeded(68.0,"F",1))
-		sendEvent(name: "heatingSetpoint", value: convertTemperatureIfNeeded(68.0,"F",1))
-		sendEvent(name: "coolingSetpoint", value: convertTemperatureIfNeeded(75.0,"F",1))
-		state.lastRunningMode = "heat"
-		updateDataValue("lastRunningMode", "heat")
-		setThermostatOperatingState("idle")
-		setSupportedThermostatFanModes(JsonOutput.toJson(["auto","high","mid","low"]))
-		setSupportedThermostatModes(JsonOutput.toJson(["auto", "cool", "heat", "off"]))
-		off()
-		fanAuto()
-	}
-	sendEvent(name: "hysteresis", value: (hysteresis ?: 0.5).toBigDecimal())
-    state.currentip = ""  
-	
-}
 
 def GetRemoteDATA()
 {
@@ -169,8 +202,16 @@ state.io = resp.data.functions.function[42]
 state.tempup = resp.data.functions.function[43]
 state.tempdown = resp.data.functions.function[44]
 state.fanspeed = resp.data.functions.function[45]
-         
-
+state.temp24 = resp.data.functions.function[46]
+state.temp25 = resp.data.functions.function[47]    
+//heattemps                
+state.heattemp25 = resp.data.functions.function[12] // commandextra1
+state.heattemp26 = resp.data.functions.function[13] // commandextra2
+state.heattemp27 = resp.data.functions.function[14] // commandextra3
+state.heattemp28 = resp.data.functions.function[15] // commandextra4
+state.heattemp29 = resp.data.functions.function[16] // commandextra5
+state.heattemp30 = resp.data.functions.function[17] // commandextra6
+                
     
     }
             
@@ -190,11 +231,25 @@ def cleanvars()  //Usada para limpar todos os states e controles aprendidos.
   AtualizaDadosGW3()  
 }
 
+def clearTemps() {
+    state.tempup = ""
+    state.tempdown = ""    
+    state.temp19 = ""
+        
+        }
+
+def createTemps() {
+    state.tempup = "TEMPUPVSTRING"
+    state.tempdown = "TEMPDOWNSTRING"
+    state.temp19 = "TEMP19"
+    
+}
 
 def installed()
 {
 	log.warn "installed..."
-	initialize()
+	off()
+    initialize()
 
 }
 
@@ -204,8 +259,59 @@ def updated()
     log.debug "updated()"
 	initialize()
     AtualizaDadosGW3()   
+    off()
 	//if (logEnable) runIn(1800,logsOff)
+    
+}
+
+
+def initialize() {
+	log.debug "initialized()"  
+    sendEvent(name:"numberOfButtons", value:30)  		
+	if (state?.lastRunningMode == null) {
+		state.lastRunningMode = "auto"
+		updateDataValue("lastRunningMode", "auto")
+		setThermostatOperatingState("idle")
 		
+		fanAuto()
+	}
+    state.currentip = ""  
+	setdefaults()
+    off()
+}
+
+def setdefaults() {
+
+    sendEvent(name: "temperature", value: convertTemperatureIfNeeded(68.0,"F",1))
+    sendEvent(name: "thermostatSetpoint", value: "20", descriptionText: "Thermostat thermostatSetpoint set to 20")
+    sendEvent(name: "heatingSetpoint", value: "25", descriptionText: "Thermostat heatingSetpoint set to 20")     
+    sendEvent(name: "coolingSetpoint", value: "19", descriptionText: "Thermostat coolingSetpoint set to 20") 
+	sendEvent(name: "hysteresis", value: (hysteresis ?: 0.5).toBigDecimal())
+    sendEvent(name: "thermostatOperatingState", value: "idle", descriptionText: "Set thermostatOperatingState to Idle")     
+    sendEvent(name: "thermostatFanMode", value: "auto", descriptionText: "Set thermostatFanMode auto")     
+	sendEvent(name: "speed", value: "auto", descriptionText: "speed set ")
+    //sendEvent(name: "setHeatingSetpoint", value: "25", descriptionText: "Set setHeatingSetpoint to 25")     
+
+    
+    //Thermostat Modes Enabled 
+	//setSupportedThermostatModes(JsonOutput.toJson(["auto", "cool", "heat", "off"]))
+    //setSupportedThermostatModes(JsonOutput.toJson(["auto","cool","heat","off"]))
+    setSupportedThermostatModes(JsonOutput.toJson(["cool","heat","off"]))
+
+    //FAN MODES enabled
+    setSupportedThermostatFanModes(JsonOutput.toJson(["auto"]))
+    sendEvent(name: "thermostatFanMode", value: "auto", descriptionText: "Fan mode pinned to auto")
+    //setSupportedThermostatFanModes(JsonOutput.toJson(["auto","high","mid","low"]))
+    
+    
+    //def fanModes = ["auto", "cool", "emergency heat", "heat", "off"]
+    //def modes = ["auto","circulate","on"]
+    //def fanspeeds = ["low","medium-low","medium","medium-high","high","on","off","auto"]
+    //sendEvent(name: "supportedThermostatFanModes", value: fanModes, descriptionText: "supportedThermostatFanModes set")    
+	//sendEvent(name: "supportedThermostatModes", value: modes, descriptionText: "supportedThermostatModes set ")
+	//sendEvent(name: "supportedFanSpeeds", value: fanspeeds , descriptionText: "supportedThermostatModes set ")
+
+    
 }
 
 
@@ -230,7 +336,6 @@ def setSupportedThermostatModes(modes) {
 	// (auto, cool, emergency heat, heat, off)
 	sendEvent(name: "supportedThermostatModes", value: modes, descriptionText: getDescriptionText("supportedThermostatModes set to ${modes}"))
 }
-
 
 
 
@@ -321,27 +426,14 @@ private updateSetpoints(sp = null, hsp = null, csp = null, operatingState = null
 }
 
 
-
-
 def on() {
-    sendEvent(name: "thermostatMode", value: "on", descriptionText: "Thermostat Mode set to on", isStateChange: true)
-	def ircode =  state.poweron   
-     log.info "ircode = " + ircode
-     EnviaComando(ircode)
-	 log.info "Enviado o commando de thermostatMode =  on " 	
-
-
+	poweron()
 }
+
 
 def off() {
-    sendEvent(name: "thermostatMode", value: "off", descriptionText: "Thermostat Mode set to off", isStateChange: true)
-	def ircode =  state.poweroff    
-     EnviaComando(ircode)
-	    log.info "Enviado o commando de thermostatMode =  off " 	
-
-         
+    poweroff()         
 }
-
 
 
 
@@ -355,53 +447,43 @@ def push(pushed) {
 	pushed = pushed.toInteger()
 	switch(pushed) {
 
-		case 2 : auto(); break
-		case 3 : heat(); break
-		case 4 : cool(); break
-        case 5 : fan(); break
-        case 6 : dry(); break
-        case 7 : setautocool(); break                
-        case 8 : comandoextra1(); break    
-        case 9 : comandoextra2(); break            
-        case 10 : comandoextra3(); break            
-        case 11 : comandoextra4(); break    
-        case 12 : comandoextra5(); break    
-        case 13 : fanAuto(); break    
-        case 14 : fanLow(); break    
-        case 15 : fanMed(); break    
-        case 16 : fanHigh(); break   
-        case 17 : comandoextra6(); break  
-        case 18 : comandoextra7(); break  
-        case 19 : comandoextra8(); break   
-		case 20 : fastcold(); break
-		case 21 : temp18(); break
-		case 22 : temp20(); break
-		case 23 : temp22(); break
-		case 24 : clock(); break
-		case 25 : sweep(); break
-		case 26 : turbo(); break
-		case 27 : fan(); break
-		case 28 : temp17(); break
-		case 29 : temp23(); break
-		case 30 : temp26(); break
-		case 31 : onoff(); break
-		case 32 : temp19(); break
-		case 33 : temp21(); break
-		case 34 : swing(); break
-		case 35 : manual(); break
-		case 36 : mode(); break
-		case 37 : up(); break
-		case 38 : timer(); break
-		case 39 : cancel(); break
-		case 40 : down(); break
-		case 41 : display(); break
-		case 42 : io(); break
-		case 43 : tempup(); break
-		case 44 : tempdown(); break
-		case 45 : fanspeed(); break
-		case 46 : off(); break
-		case 47 : poweron(); break
-		
+     	case 1 :  poweron(); break
+		case 2 :  off(); break     
+  		case 3 :  temp18(); break
+		case 4 :  temp19(); break        
+		case 5 :  temp20(); break
+		case 6 :  temp21(); break        
+		case 7 :  temp22(); break
+		case 8 :  temp23(); break
+		case 9 :  temp24(); break
+		case 10 : temp25(); break        
+        case 11 : tempheat25(); break    
+        case 12 : tempheat26(); break            
+        case 13 : tempheat27(); break            
+        case 14 : tempheat28(); break    
+        case 15 : tempheat29(); break    
+        case 16 : tempheat30(); break  
+		case 17 : tempup(); break
+		case 18 : tempdown(); break
+		case 19 : fastcold(); break
+        case 20 : clock(); break
+        case 21 : sweep(); break
+        case 22 : turbo(); break
+        case 23 : fan(); break
+        case 24 : onoff(); break
+        case 25 : swing(); break
+        case 25 : manual(); break
+        case 26 : mode(); break
+        case 27 : up(); break
+        case 28 : timer(); break
+        case 29 : cancel(); break
+        case 30 : down(); break
+        case 31 : display(); break
+        case 32 : io(); break
+        case 33 : fanspeed(); break
+        case 34 : comandoextra7(); break
+        case 35 : comandoextra8(); break        
+
 		
 		default:
 			logDebug("push: Botão inválido.")
@@ -409,32 +491,66 @@ def push(pushed) {
 	}
 }
 
+private void updateDisplayTempForLastMode(String prevMode = null) {
+    try {
+        String modeNow = prevMode ?: (device.currentValue("thermostatMode") as String)
+        def hsp = device.currentValue("heatingSetpoint")
+        def csp = device.currentValue("coolingSetpoint")
+        def sp  = device.currentValue("thermostatSetpoint")
+        def value = null
+        if (modeNow == "cool") {
+            value = csp ?: sp ?: hsp
+        } else if (modeNow == "heat") {
+            value = hsp ?: sp ?: csp
+        } else {
+            // auto/other → prefer thermostatSetpoint, else whichever exists
+            value = sp ?: csp ?: hsp
+        }
+        if (value != null) {
+            sendEvent(name: "temperature", value: value, descriptionText: "Display last setpoint while off")
+        }
+    } catch (e) {
+        log.warn "updateDisplayTempForLastMode error: ${e}"
+    }
+}
+
 
 
 //Botão #0 para dashboard
 def poweroff(){
-    sendEvent(name: "thermostatMode", value: "off", descriptionText: "Thermostat Mode set to off", isStateChange: true)
-    def ircode =  state.poweroff
-    EnviaComando(ircode)    
+    log.debug "Thermostat turned off"
+    sendEvent(name: "thermostatMode", value: "off")
+    sendEvent(name: "thermostatOperatingState", value: "idle")
+
+    def last = device.currentValue("heatingSetpoint") ?: device.currentValue("coolingSetpoint")
+    if(last) {
+        sendEvent(name: "temperature", value: last, unit: "°C", descriptionText: "Display last setpoint while off")
+    } else {
+        sendEvent(name: "temperature", value: null)
+    }
 
 }
 
 //Botão #1 para dashboard
 def poweron(){
     sendEvent(name: "thermostatMode", value: "on", descriptionText: "Thermostat Mode set to on", isStateChange: true)
+    sendEvent(name: "thermostatOperatingState", value: "cooling")
+
     def ircode =  state.poweron
-    EnviaComando(ircode)    
+    EnviaComando(ircode)   
+
 }
 
 //Botão #2 para dashboard
 def auto(){
     sendEvent(name: "thermostatMode", value: "auto")
+    sendEvent(name: "thermostatOperatingState", value: "cooling")    
     def ircode =  state.auto
 	if (ircode.length() < 30) {
 		ircode = state.mode
 	}	
     EnviaComando(ircode)    
-    log.info "Enviado o commando de thermostatMode =  auto " 
+    log.info "Sent command thermostatMode =  auto " 
 	
 }
 
@@ -442,38 +558,47 @@ def auto(){
 //Botão #3 para dashboard
 def heat(){
     sendEvent(name: "thermostatMode", value: "heat")
-    def ircode =  state.heat
+    //setThermostatMode("heat")    
+    sendEvent(name: "thermostatOperatingState", value: "heating")    
+    setHeatingSetpoint(25)    
+
+    def ircode =  state.heattemp25
 	if (ircode.length() < 30) {
-		ircode = state.mode
-		log.info "pego o mode para heat"
-		log.info state.mode 		
+		ircode = state.heattemp26
+		log.info "No variable for heat heattemp25, so setup heattemp26"
+		log.info ircode 		
 	}	
     EnviaComando(ircode)    
-    log.info "Enviado o commando de thermostatMode =  auto " 	
+    log.info "Sent command thermostatMode =  heat "+ ", with temperature set to = " + "25" 	 	
 }
 
 //Botão #4 para dashboard
 def cool(){
     sendEvent(name: "thermostatMode", value: "cool")
-    def ircode = state.cool
+    //setThermostatMode("cool")
+    sendEvent(name: "thermostatOperatingState", value: "cooling")    
+    setCoolingSetpoint(19)
+    def ircode =  state.temp19    
 	if (ircode.length() < 30) {
-		ircode = state.mode
-		log.info "pego o mode para cool"
+		ircode = state.temp20
+		log.info "No variable for temp19, so setup temp20"
 		log.info ircode
 	}	
     EnviaComando(ircode)    
-    log.info "Enviado o commando de thermostatMode =  cool " 	
+    log.info "Sent command thermostatMode =  cool " + ", with temperature set to = " + "19" 	
 }
 
 //Botão #5 para dashboard
 def fan(){
     sendEvent(name: "thermostatMode", value: "fan")
+    sendEvent(name: "thermostatOperatingState", value: "fan only")    
+    
     def ircode =  state.fan
 	if (ircode.length() < 30) {
 		ircode = state.mode
 	}	
     EnviaComando(ircode)    
-    log.info "Enviado o commando de thermostatMode =  fan " 	
+    log.info "Sent command thermostatMode =  fan " 	
 }
 
 
@@ -536,20 +661,20 @@ def comandoextra5(){
 
 //Botão #13 para dashboard
 def fanAuto(){
-    sendEvent(name: "setThermostatFanMode", value: "fanAuto")
+    setThermostatFanMode(fanAuto)
     sendEvent(name: "FanMode", value: "fanAuto")
     EnviaComando(ircode)    
-    log.info "Enviado o commando de thermostatMode =  auto " 	
+    log.info "Sent command thermostatMode =  auto " 	
 }
 
 
 
 //Botão #14 para dashboard
 def fanLow(){
-    sendEvent(name: "setThermostatFanMode", value: "fanLow")
+    setThermostatFanMode(fanLow)
     def ircode =  state.fanLow
     EnviaComando(ircode)
-    log.info "Enviado o commando de setThermostatFanMode =  fanLow " 	
+    log.info "Sent command setThermostatFanMode =  fanLow " 	
 	
 }
 
@@ -557,19 +682,19 @@ def fanLow(){
 
 //Botão #18 para dashboard
 def fanMed(){
-    sendEvent(name: "setThermostatFanMode", value: "fanMed")
+    setThermostatFanMode(fanMed)
    def ircode =   state.fanMed
     EnviaComando(ircode)    
-    log.info "Enviado o commando de setThermostatFanMode =  fanMed " 	
+    log.info "Sent command setThermostatFanMode =  fanMed " 	
 	
 }
 
 //Botão #19 para dashboard
 def fanHigh(){
-    sendEvent(name: "setThermostatFanMode", value: "fanHigh")
+    setThermostatFanMode(fanHigh)
     def ircode =  state.fanHigh
     EnviaComando(ircode)    
-    log.info "Enviado o commando de setThermostatFanMode =  fanMed " 	
+    log.info "Sent command setThermostatFanMode =  fanMed " 	
 	
 }
 
@@ -604,26 +729,31 @@ def fastcold(){
 
 //Botão #25 para dashboard
 def temp18(){
-    sendEvent(name: "setCoolingSetpoint", value: 18 )
+    sendEvent(name: "CoolingSetpoint", value: 18 )
     def ircode =  state.temp18
     EnviaComando(ircode)
-    log.info "Enviado o commando de setThermostatFanMode =  fanMed " 	
+    log.info "Sent command Temp =  18 " 	
 	
 }
 
 
+
 //Botão #26 para dashboard
 def temp20(){
-    sendEvent(name: "setCoolingSetpoint", value: 20 )
+    sendEvent(name: "CoolingSetpoint", value: 20 )
     def ircode =  state.temp20
     EnviaComando(ircode)
+    log.info "Sent command Temp =  18 " 	
+    
 }
 
 //Botão #27 para dashboard
 def temp22(){
-    sendEvent(name: "setCoolingSetpoint", value: 22 )
+    sendEvent(name: "CoolingSetpoint", value: 22 )
     def ircode =  state.temp22
     EnviaComando(ircode)
+    log.info "Sent command Temp =  22" 	
+    
 }
 
 //Botão #28 para dashboard
@@ -650,23 +780,29 @@ def turbo(){
 
 //Botão #32 para dashboard
 def temp17(){
-    sendEvent(name: "setCoolingSetpoint", value: 17 )
+    sendEvent(name: "CoolingSetpoint", value: 17 )
     def ircode = state.temp17
     EnviaComando(ircode)
+    log.info "Sent command Temp =  17 " 	
+    
 }
 
 //Botão #33 para dashboard
 def temp23(){
-    sendEvent(name: "setCoolingSetpoint", value: 23 )
+    sendEvent(name: "CoolingSetpoint", value: 23 )
     def ircode =  state.temp23
     EnviaComando(ircode)
+    log.info "Sent command Temp =  23 " 	
+    
 }
 
 //Botão #34 para dashboard
 def temp26(){
-    sendEvent(name: "setCoolingSetpoint", value: 26 )
+    sendEvent(name: "CoolingSetpoint", value: 26 )
     def ircode =  state.temp26
     EnviaComando(ircode)
+    log.info "Sent command Temp =  26 " 	
+    
 }
 
 //Botão #35 para dashboard
@@ -674,25 +810,25 @@ def onoff(){
     sendEvent(name: "action", value: "onoff")
     def ircode =  state.onoff
     EnviaComando(ircode)
-    log.info "Enviado o commando de setThermostatFanMode =  fanMed " 	
+    log.info "Sent command Toggle On/off " 	
 	
 }
 
 //Botão #36 para dashboard
 def temp19(){
-    sendEvent(name: "setCoolingSetpoint", value: 19 )
+    sendEvent(name: "CoolingSetpoint", value: 19 )
     def ircode =  state.temp19
     EnviaComando(ircode)
-    log.info "Enviado o commando de setCoolingSetpoint =  19 " 	
+    log.info "Sent command Temp =  19 " 	
 	
 }
 
 //Botão #38 para dashboard
 def temp21(){
-    sendEvent(name: "setCoolingSetpoint", value: 21 )
+    sendEvent(name: "CoolingSetpoint", value: 21 )
     def ircode =   state.temp21
     EnviaComando(ircode)
-    log.info "Enviado o commando de setCoolingSetpoint =  21 " 	
+    log.info "Sent command Temp =  21 " 	
 	
 }
 
@@ -716,7 +852,7 @@ def mode(){
     sendEvent(name: "action", value: "mode")
     def ircode =  state.mode
     EnviaComando(ircode)
-    log.info "Enviado o commando de action =  mode " 	
+    log.info "Sent command action =  mode " 	
 	
 }
 
@@ -725,7 +861,7 @@ def up(){
     sendEvent(name: "action", value: "up")
     def ircode =  state.up
     EnviaComando(ircode)
-    log.info "Enviado o commando de action =  up " 	
+    log.info "Sent command action =  up " 	
 	
 }
 
@@ -749,7 +885,7 @@ def down(){
     sendEvent(name: "action", value: "down")
     def ircode =  state.down
     EnviaComando(ircode)
-    log.info "Enviado o commando de action =  down " 	
+    log.info "Sent command action =  down " 	
 	
 }
 
@@ -772,7 +908,7 @@ def tempup(){
     sendEvent(name: "action", value: "tempup")
     def ircode =  state.tempup
     EnviaComando(ircode)
-    log.info "Enviado o commando de action =  tempup " 	
+    log.info "Sent command action =  Temp + " 	
 	
 }
 
@@ -781,7 +917,7 @@ def tempdown(){
     sendEvent(name: "action", value: "tempdown")
     def ircode =  state.tempdown
     EnviaComando(ircode)
-    log.info "Enviado o commando de action =  tempdown " 	
+    log.info "Sent command action =  temp - " 	
 	
 }
 
@@ -793,46 +929,202 @@ def fanspeed(){
 }
 
 
-def setCoolingSetpoint(temperature) {    
-    if (device.currentValue("thermostatMode") == "cool") {               
-        logInfo "Colocando a temp em  ${temperature}"  
-        def previousTempCool = device.currentValue("coolingSetpoint")
-        
-        if (previousTempCool <= temperature) {
-            tempup()
-            sendEvent(name: "setCoolingSetpoint", value: temperature )
-            logInfo "Aumentando a temp"
-        } else {
-            sendEvent(name: "setCoolingSetpoint", value: temperature )
-            tempdown()
-            logInfo "Diminuindo a temp"
-        }
-    } else {
-        log.warn "Sem alterar a temp para  ${temperature}, porque o modo atual é ${device.currentValue("thermostatMode")}"
-    }
-}
+//// HEAT TEMPS
 
-def setHeatingSetpoint(temperature) {    
-    if (device.currentValue("thermostatMode") == "heat") {               
-        logInfo "Colocando a temp em  ${temperature}"  
-        def previousTempHeat = device.currentValue("heatingSetpoint")
-        
-        if (previousTempHeat <= temperature) {
-            tempup()
-            sendEvent(name: "setHeatingSetpoint", value: temperature )
-            logInfo "Aumentando a temp"
-        } else {
-            sendEvent(name: "setHeatingSetpoint", value: temperature )
-            tempdown()
-            logInfo "Diminuindo a temp"
-        }
-    } else {
-        log.warn "Sem alterar a temp para  ${temperature}, porque o modo atual é ${device.currentValue("thermostatMode")}"
-    }
+//Botão # para dashboard
+def heattemp25(){
+    sendEvent(name: "HeatingSetpoint", value: 25 )
+    def ircode =   state.heattemp25
+    EnviaComando(ircode)
+    log.info "Sent command Temp Heat =  25 " 	
+    
 }
 
 
-def setThermostatFanMode(fanmode) {
+//Botão # para dashboard
+def heattemp26(){
+    sendEvent(name: "HeatingSetpoint", value: 26 )
+    def ircode =   state.heattemp26
+    EnviaComando(ircode)
+    log.info "Sent command Temp Heat =  26 " 	    
+}
+
+
+//Botão # para dashboard
+def heattemp27(){
+    sendEvent(name: "HeatingSetpoint", value: 27 )
+    def ircode =   state.heattemp27
+    EnviaComando(ircode)
+    log.info "Sent command Temp Heat =  27 " 	    
+}
+
+
+//Botão # para dashboard
+def heattemp28(){
+    sendEvent(name: "HeatingSetpoint", value: 28 )
+    def ircode =   state.heattemp28
+    EnviaComando(ircode)
+    log.info "Sent command Temp Heat =  28 " 	    
+}
+
+//Botão # para dashboard
+def heattemp29(){
+    sendEvent(name: "HeatingSetpoint", value: 29 )
+    def ircode =   state.heattemp29
+    EnviaComando(ircode)
+    log.info "Sent command Temp Heat =  29 " 	    
+}
+
+
+//Botão # para dashboard
+def heattemp30(){
+    sendEvent(name: "HeatingSetpoint", value: 30 )
+    def ircode =   state.heattemp30
+    EnviaComando(ircode)
+    
+}
+
+
+
+///SETTING COOLING POINTS. 
+
+
+private boolean isBlank(Object s) {
+    return !(s instanceof CharSequence) || s.toString().trim().isEmpty()
+}
+
+
+def setCoolingSetpoint(temperature) {
+    if (device.currentValue("thermostatMode") != "cool") {
+        log.warn "No change of TEMP to ${temperature}, because the current mode is ${device.currentValue("thermostatMode")}"
+        return
+    }
+
+    int tReq = (temperature as Integer)
+    int prev = (device.currentValue("coolingSetpoint") as Integer)
+
+    // Going UP branch
+    if (prev <= tReq) {
+        if (!isBlank(state.tempup)) {
+            try {
+                tempup()
+                sendEvent(name:"coolingSetpoint", value:tReq)
+                sendEvent(name:"setCoolingSetpoint", value:tReq)
+                logInfo "Aumentando a temp (tempup)"
+            } catch (MissingMethodException e) {
+                log.error "tempup() not found: ${e.message}"
+            }
+            return
+        }
+    } else {
+        // Going DOWN branch
+        if (!isBlank(state.tempdown)) {
+            try {
+                tempdown()
+                sendEvent(name:"coolingSetpoint", value:tReq)
+                sendEvent(name:"setCoolingSetpoint", value:tReq)
+                logInfo "Diminuindo a temp (tempdown)"
+            } catch (MissingMethodException e) {
+                log.error "tempdown() not found: ${e.message}"
+            }
+            return
+        }
+    }
+
+    // Exact/closest fallback: try calling tempNN() methods in order
+    // Build candidate list 15..32 sorted by distance (exact first), tie → higher key
+    List<Integer> candidates = (17..25).toList().sort { Integer a, Integer b ->
+        int da = Math.abs(a - tReq); int db = Math.abs(b - tReq)
+        int cmp = (da <=> db)
+        (cmp != 0) ? cmp : (b <=> a)
+    }
+
+    boolean sent = false
+    for (Integer k : candidates) {
+        try {
+            this."temp${k}"()
+            sent = true
+            log.debug "Cooling: selected ${k}° via temp${k}()"
+            break
+        } catch (MissingMethodException ignore) {
+            // try next
+        }
+    }
+    if (!sent) {
+        log.error "Cooling: none of temp15..temp32() exist to call."
+        return
+    }
+
+    sendEvent(name:"coolingSetpoint", value:tReq)
+    sendEvent(name:"setCoolingSetpoint", value:tReq)
+}
+
+def setHeatingSetpoint(temperature) {
+    if (device.currentValue("thermostatMode") != "heat") {
+        log.warn "No change of TEMP to ${temperature}, because the current mode is ${device.currentValue("thermostatMode")}"
+        return
+    }
+
+    int tReq = (temperature as Integer)
+    int prev = (device.currentValue("heatingSetpoint") as Integer)
+
+    // Going UP branch (increase heat)
+    if (prev <= tReq) {
+        if (!isBlank(state.tempup)) {
+            try {
+                tempup()
+                sendEvent(name:"heatingSetpoint", value:tReq)
+                sendEvent(name:"setHeatingSetpoint", value:tReq)
+                logInfo "HEAT increasing (tempup)"
+            } catch (MissingMethodException e) {
+                log.error "tempup() not found: ${e.message}"
+            }
+            return
+        }
+    } else {
+        // Going DOWN branch (decrease heat)
+        if (!isBlank(state.tempdown)) {
+            try {
+                tempdown()
+                sendEvent(name:"heatingSetpoint", value:tReq)
+                sendEvent(name:"setHeatingSetpoint", value:tReq)
+                logInfo "HEAT decreasing (tempdown)"
+            } catch (MissingMethodException e) {
+                log.error "tempdown() not found: ${e.message}"
+            }
+            return
+        }
+    }
+
+    // Exact/closest fallback: try heattemp25..heattemp30() in order
+    List<Integer> candidates = (25..30).toList().sort { Integer a, Integer b ->
+        int da = Math.abs(a - tReq); int db = Math.abs(b - tReq)
+        int cmp = (da <=> db)
+        (cmp != 0) ? cmp : (b <=> a)
+    }
+
+    boolean sent = false
+    for (Integer k : candidates) {
+        try {
+            this."heattemp${k}"()
+            sent = true
+            log.debug "Heating: selected ${k}° via heattemp${k}()"
+            break
+        } catch (MissingMethodException ignore) {
+            // try next
+        }
+    }
+    if (!sent) {
+        log.error "Heating: none of heattemp25..heattemp30() exist to call."
+        return
+    }
+
+    sendEvent(name:"heatingSetpoint", value:tReq)
+    sendEvent(name:"setHeatingSetpoint", value:tReq)
+}
+
+//ORIGINAL ThermostatFanmode
+/* def setThermostatFanMode(fanmode) {
     switch(fanmode) {
         case "on":
             fan()
@@ -862,6 +1154,15 @@ def setThermostatFanMode(fanmode) {
             log.warn "Unknown fan mode ${fanmode}"
             break
     }
+}
+*/
+
+def setThermostatFanMode(fanmode) {
+    // Pin fan mode to 'auto' to avoid confusing the user UI
+    sendEvent(name: "thermostatFanMode", value: "auto", descriptionText: "Fan mode pinned to auto")
+    // Optionally: send the IR for auto fan if your remote needs it:
+    // def ircode = state.fanauto ?: state.fanAuto ?: null
+    // if(ircode) EnviaComando(ircode)
 }
 
 
