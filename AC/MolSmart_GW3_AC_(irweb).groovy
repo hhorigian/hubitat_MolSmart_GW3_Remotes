@@ -995,10 +995,16 @@ private boolean isBlank(Object s) {
 
 
 def setCoolingSetpoint(temperature) {
-    if (device.currentValue("thermostatMode") != "cool") {
-        log.warn "No change of TEMP to ${temperature}, because the current mode is ${device.currentValue("thermostatMode")}"
+ 	def modeNow = device.currentValue("thermostatMode")
+    def osNow   = device.currentValue("thermostatOperatingState")
+    boolean allowTransition = (modeNow == "off" && osNow in ["cool","cooling"])
+
+    if (!(modeNow == "cool" || allowTransition || osNow in ["cool","cooling"])) {
+        log.warn "No change of TEMP to ${temperature}, because the current mode is ${modeNow} and operatingState is ${osNow}"
         return
     }
+    
+    
 
     int tReq = (temperature as Integer)
     int prev = (device.currentValue("coolingSetpoint") as Integer)
@@ -1060,8 +1066,12 @@ def setCoolingSetpoint(temperature) {
 }
 
 def setHeatingSetpoint(temperature) {
-    if (device.currentValue("thermostatMode") != "heat") {
-        log.warn "No change of TEMP to ${temperature}, because the current mode is ${device.currentValue("thermostatMode")}"
+    def modeNow = device.currentValue("thermostatMode")
+    def osNow   = device.currentValue("thermostatOperatingState")
+    boolean allowTransition = (modeNow == "off" && osNow in ["heat","heating"])
+
+    if (!(modeNow == "heat" || allowTransition || osNow in ["heat","heating"])) {
+        log.warn "No change of TEMP to ${temperature}, because the current mode is ${modeNow} and operatingState is ${osNow}"
         return
     }
 
