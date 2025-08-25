@@ -529,6 +529,9 @@ def poweroff(){
         sendEvent(name: "temperature", value: null)
     }
 
+	def ircode =  state.poweroff    
+    EnviaComando(ircode)    
+	
 }
 
 //Botão #1 para dashboard
