@@ -18,6 +18,9 @@
  *              V.1.0   5/8/2024 - V1 para trazer os controles remotos prontos. 
  *              V.1.1   20/8/2024 - Added the commands for each function. 
  *              V.1.2   10/12/2024 - Fixed poweroff. 
+ *              V.1.3   29/30/2025 - Fixed poweroff. 
+ *              V.1.4   26/9/2025  - Changed to ASYNC Http method  
+ *
  *
  *
  */
@@ -123,7 +126,7 @@ command "backIRsend"
 
 
   preferences {
-    input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false
+    	input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false
         input name: "molIPAddress", type: "text", title: "MolSmart GW3 IP Address", submitOnChange: true, required: true, defaultValue: "192.168.1.100" 
     	input name: "serialNum", title:"Numero de serie (Etiqueta GW3)", type: "string", required: true
 	    input name: "verifyCode", title:"Verify code (Etiqueta GW3)", type: "string", required: true
@@ -242,6 +245,8 @@ def updated()
     sendEvent(name:"numberOfButtons", value:60)    
     log.debug "updated()"
     AtualizaDadosGW3()  
+	if (logEnable) runIn(1800,logsOff)
+    
 
 }
 
@@ -724,78 +729,80 @@ def backIRsend(){
 
       
 
-def EnviaComando(command) {    
+private String buildFullUrl(button) {
+    def ip   = settings.molIPAddress
+    def sn   = settings.serialNum
+    def vc   = settings.verifyCode
+    def cid  = settings.cId
+    def rcid = (settings.rcId ?: "61")
+    def ch = state.channel
+    def repeat = settings.repeatSendHEX 
+
     if (state.encoding == "sendir") {   //if the remote is SendIR(Global Cache) uses one URL, if it's HEX format, uses another URL. 
         
-             URI1 = "http://" + state.currentip + "/api/device/deviceDetails/smartHomeAutoHttpControl?serialNum=" + state.serialNum + "&verifyCode="  + state.verifyCode + "&c=" + state.channel + "&gc=" + command       
-   
-    } else {
-             URI1 = "http://" + state.currentip + "/api/device/deviceDetails/smartHomeAutoHttpControl?serialNum=" + state.serialNum + "&verifyCode="  + state.verifyCode + "&pronto=" + command + "&c=" + state.channel + "&r=" + settings.repeatSendHEX        
+        return "http://${ip}/api/device/deviceDetails/smartHomeAutoHttpControl" +
+           "?serialNum=${sn}&verifyCode=${vc}&c=${ch}&gc=${button}"	
         
-    }       
-    httpPOSTExec(URI1)
-    log.info "HTTP " +  URI1 + " | commando IR = " + command
-  
+    } else {
+        
+        return "http://${ip}/api/device/deviceDetails/smartHomeAutoHttpControl" +
+            "?serialNum=${sn}&verifyCode=${vc}&pronto=${button}&c=${ch}&r=${repeat}"	
+    }             
 }
 
 
-/* def EnviaComandoHEX(command) {
-    
-    def URI = "http://" + state.currentip + "/api/device/deviceDetails/smartHomeAutoHttpControl?serialNum=" + state.serialNum + "&verifyCode="  + state.verifyCode + "&pronto=" + command + "&c=" + state.channel + "&r=" + settings.repeatSendHEX        
-    httpPOSTExec(URI)
-    log.info "HTTP" +  URI + " | commando IR = "
+def EnviaComando(button) {
+	
+    settings.timeoutSec  = 7    
+    String fullUrl = buildFullUrl(button)
+    log.info "FullURL = " + fullUrl
 
-    
+    // params: give only a 'uri' so Hubitat won't rebuild/encode the query
+    Map params = [ uri: fullUrl, timeout: (settings.timeoutSec ?: 7) as int ]
+    log.info "Params = " + params
+	
+        try {
+            asynchttpPost('gw3PostCallback', params, [cmd: button])
+        } catch (e) {
+            log.warn "${device.displayName} Async POST scheduling failed: ${e.message}"
+    }
 }
 
 
-def EnviaComandoSendIR(command) {
-    
-    def URI = "http://" + state.currentip + "/api/device/deviceDetails/smartHomeAutoHttpControl?serialNum=" + state.serialNum + "&verifyCode="  + state.verifyCode + "&c=" + state.channel + "&gc=" + command       
-    httpPOSTExec(URI)
-    log.info "Enviado...HTTP" +  URI + " commando = "   
-    
-}
-*/
 
+void gw3PostCallback(resp, data) {
+    String cmd = data?.cmd
+    try {
+        if (resp?.status in 200..299) {
+            logDebug "POST OK (async) cmd=${cmd} status=${resp?.status}"
+             state.ultimamensagem =  "Resposta OK"
 
-def httpPOSTExec(URI)
-{
-    
-    try
-    {
-        getString = URI
-        segundo = ""
-        httpPost(getString.replaceAll(' ', '%20'),segundo,  )
-        { resp ->
-            if (resp.data)
-            {
-                        log.info "Response " + resp.data                
-                                  
-            }
+        } else {
+            logWarn "POST error (async) status=${resp?.status} cmd=${cmd}"
+            state.ultimamensagem =  "Erro no envio do comando"
+            
         }
-    }
-                            
-
-    catch (Exception e)
-    {
-        logDebug("httpPostExec() failed: ${e.message}")
-    }
-    
-}
-
-def info(msg) {
-    if (logLevel == "INFO" || logLevel == "DEBUG") {
-        log.info(msg)
+    } catch (e) {
+        logWarn "Async callback exception: ${e.message} (cmd=${cmd})"
+        state.errormessage = e.message
+        
     }
 }
 
 
-//DEBUG
-private logDebug(msg) {
-  if (settings?.debugOutput || settings?.debugOutput == null) {
-    log.debug "$msg"
-  }
+
+
+private logInfo(msg)  { if (settings?.txtEnable   != false) log.info  "${device.displayName} ${msg}" }
+private logDebug(msg) { if (settings?.debugOutput == true)  log.debug "${device.displayName} ${msg}" }
+private logWarn(msg)  { log.warn "${device.displayName} ${msg}" }
+
+def logsOff() {
+    log.warn 'logging disabled...'
+    device.updateSetting('logInfo', [value:'false', type:'bool'])
+    device.updateSetting('logWarn', [value:'false', type:'bool'])
+    device.updateSetting('logDebug', [value:'false', type:'bool'])
+    device.updateSetting('logTrace', [value:'false', type:'bool'])
 }
+
 
 
