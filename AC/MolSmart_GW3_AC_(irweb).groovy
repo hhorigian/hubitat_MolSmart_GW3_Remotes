@@ -30,7 +30,9 @@
  * 						- added setdefaults
  * 						- fixed the temp up / temp down to use the existing values in State variables, or if not found, then use the temp values in cool, or heat 
  * 						- added the heattemp25..heattemp30 variables which are using the values stored in commandoextra1..comandoextra6
- */
+ *				V.1.6   - 26/9/2025  - Changed to ASYNC Http method  
+*/
+
 metadata {
   definition (name: "MolSmart - GW3 - AC (irweb)", namespace: "TRATO", author: "VH", vid: "generic-contact") {
 		capability "Actuator"
@@ -260,7 +262,7 @@ def updated()
 	initialize()
     AtualizaDadosGW3()   
     off()
-	//if (logEnable) runIn(1800,logsOff)
+	if (logEnable) runIn(1800,logsOff)
     
 }
 
@@ -1218,86 +1220,50 @@ def setThermostatMode(thermostatmode) {
     }
 }
 
-      
 
-def EnviaComando(command) {    
+private String buildFullUrl(button) {
+    def ip   = settings.molIPAddress
+    def sn   = settings.serialNum
+    def vc   = settings.verifyCode
+    def cid  = settings.cId
+    def rcid = (settings.rcId ?: "61")
+    def ch = state.channel
+    def repeat = settings.repeatSendHEX 
+
     if (state.encoding == "sendir") {   //if the remote is SendIR(Global Cache) uses one URL, if it's HEX format, uses another URL. 
+
+        return "http://${ip}/api/device/deviceDetails/smartHomeAutoHttpControl" +
+           "?serialNum=${sn}&verifyCode=${vc}&c=${ch}&gc=${button}"	
         
-             URI1 = "http://" + state.currentip + "/api/device/deviceDetails/smartHomeAutoHttpControl?serialNum=" + state.serialNum + "&verifyCode="  + state.verifyCode + "&c=" + state.channel + "&gc=" + command       
-   
     } else {
-             URI1 = "http://" + state.currentip + "/api/device/deviceDetails/smartHomeAutoHttpControl?serialNum=" + state.serialNum + "&verifyCode="  + state.verifyCode + "&pronto=" + command + "&c=" + state.channel + "&r=" + settings.repeatSendHEX        
-        
-    }       
-    httpPOSTExec(URI1)
-    log.info "HTTP " +  URI1 + " | commando IR = " + command
-  
+
+        return "http://${ip}/api/device/deviceDetails/smartHomeAutoHttpControl" +
+            "?serialNum=${sn}&verifyCode=${vc}&pronto=${button}&c=${ch}&r=${repeat}"	
+    }             
 }
 
+ 
+def EnviaComando(button) {
+	
+    settings.timeoutSec  = 7    
+    String fullUrl = buildFullUrl(button)
+    log.info "FullURL = " + fullUrl
 
-/* def EnviaComandoHEX(command) {
-    
-    def URI = "http://" + state.currentip + "/api/device/deviceDetails/smartHomeAutoHttpControl?serialNum=" + state.serialNum + "&verifyCode="  + state.verifyCode + "&pronto=" + command + "&c=" + state.channel + "&r=" + settings.repeatSendHEX        
-    httpPOSTExec(URI)
-    log.info "HTTP" +  URI + " | commando IR = "
-
-    
-}
-
-
-def EnviaComandoSendIR(command) {
-    
-    def URI = "http://" + state.currentip + "/api/device/deviceDetails/smartHomeAutoHttpControl?serialNum=" + state.serialNum + "&verifyCode="  + state.verifyCode + "&c=" + state.channel + "&gc=" + command       
-    httpPOSTExec(URI)
-    log.info "Enviado...HTTP" +  URI + " commando = "   
-    
-}
-*/
-
-
-def httpPOSTExec(URI)
-{
-    
-    try
-    {
-        getString = URI
-        segundo = ""
-        httpPost(getString.replaceAll(' ', '%20'),segundo,  )
-        { resp ->
-            if (resp.data)
-            {
-                        log.info "Response " + resp.data                
-                                  
-            }
-        }
-    }
-                            
-
-    catch (Exception e)
-    {
-        logDebug("httpPostExec() failed: ${e.message}")
-    }
-    
-}
-
-def info(msg) {
-    if (logLevel == "INFO" || logLevel == "DEBUG") {
-        log.info(msg)
+    // params: give only a 'uri' so Hubitat won't rebuild/encode the query
+    Map params = [ uri: fullUrl, timeout: (settings.timeoutSec ?: 7) as int ]
+    log.info "Params = " + params
+	
+        try {
+            asynchttpPost('gw3PostCallback', params, [cmd: button])
+        } catch (e) {
+            log.warn "${device.displayName} Async POST scheduling failed: ${e.message}"
     }
 }
 
-def logInfo(msg) {
-    if (logEnable) log.info msg
-}
 
 
 
-//DEBUG
-private logDebug(msg) {
-  if (settings?.debugOutput || settings?.debugOutput == null) {
-    log.debug "$msg"
-  }
-}
+
 
 
 private getDescriptionText(msg) {
@@ -1305,6 +1271,12 @@ private getDescriptionText(msg) {
 	if (settings?.txtEnable) log.info "${descriptionText}"
 	return descriptionText
 }
+        
+
+private logInfo(msg)  { if (settings?.txtEnable   != false) log.info  "${device.displayName} ${msg}" }
+private logDebug(msg) { if (settings?.debugOutput == true)  log.debug "${device.displayName} ${msg}" }
+private logWarn(msg)  { log.warn "${device.displayName} ${msg}" }
+        
 
 
 def logsOff() {
