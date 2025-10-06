@@ -82,50 +82,40 @@ Driver para usar Controles Remotos criados no http://ir.molsmart.com.br.
 
 # Relação de botões para Controles de Ar Condicionado   
 
-		Botão 2 : auto
-		Botão 3 : heat
-		Botão 4 : cool
-        	Botão 5 : fan
-       		Botão 6 : dry
-        	Botão 7 : setautocool                
-        	Botão 8 : comandoextra1    
-        	Botão 9 : comandoextra2            
-        	Botão 10 : comandoextra3            
-        	Botão 11 : comandoextra4    
-        	Botão 12 : comandoextra5    
-        	Botão 13 : fanAuto    
-        	Botão 14 : fanLow    
-        	Botão 15 : fanMed    
-       		Botão 16 : fanHigh   
-        	Botão 17 : comandoextra6  
-        	Botão 18 : comandoextra7  
-        	Botão 19 : comandoextra8   
-		Botão 20 : fastcold
-		Botão 21 : temp18
-		Botão 22 : temp20
-		Botão 23 : temp22
-		Botão 24 : clock
-		Botão 25 : sweep
-		Botão 26 : turbo
-		Botão 27 : fan
-		Botão 28 : temp17
-		Botão 29 : temp23
-		Botão 30 : temp26
-		Botão 31 : onoff
-		Botão 32 : temp19
-		Botão 33 : temp21
-		Botão 34 : swing
-		Botão 35 : manual
-		Botão 36 : mode
-		Botão 37 : up
-		Botão 38 : timer
-		Botão 39 : cancel
-		Botão 40 : down
-		Botão 41 : display
-		Botão 42 : io
-		Botão 43 : tempup
-		Botão 44 : tempdown
-		Botão 45 : fanspeed
-		Botão 46 : poweroff
-		Botão 47 : poweron
-  
+
+     	case 1 :  poweron(); break
+		case 2 :  off(); break     
+  		case 3 :  temp18(); break
+		case 4 :  temp19(); break        
+		case 5 :  temp20(); break
+		case 6 :  temp21(); break        
+		case 7 :  temp22(); break
+		case 8 :  temp23(); break
+		case 9 :  temp24(); break
+		case 10 : temp25(); break        
+        case 11 : tempheat25(); break    
+        case 12 : tempheat26(); break            
+        case 13 : tempheat27(); break            
+        case 14 : tempheat28(); break    
+        case 15 : tempheat29(); break    
+        case 16 : tempheat30(); break  
+		case 17 : tempup(); break
+		case 18 : tempdown(); break
+		case 19 : fastcold(); break
+        case 20 : clock(); break
+        case 21 : sweep(); break
+        case 22 : turbo(); break
+        case 23 : fan(); break
+        case 24 : onoff(); break
+        case 25 : swing(); break
+        case 25 : manual(); break
+        case 26 : mode(); break
+        case 27 : up(); break
+        case 28 : timer(); break
+        case 29 : cancel(); break
+        case 30 : down(); break
+        case 31 : display(); break
+        case 32 : io(); break
+        case 33 : fanspeed(); break
+        case 34 : comandoextra7(); break
+        case 35 : comandoextra8(); break        
