@@ -31,6 +31,8 @@
  * 						- fixed the temp up / temp down to use the existing values in State variables, or if not found, then use the temp values in cool, or heat 
  * 						- added the heattemp25..heattemp30 variables which are using the values stored in commandoextra1..comandoextra6
  *				V.1.6   - 26/9/2025  - Changed to ASYNC Http method  
+ *				V.1.7   - 7/10/2025  - Added HTTP Check for Online/Offline Status of GW3. Added Version attribute to show in device.  
+
 */
 
 metadata {
@@ -94,6 +96,16 @@ command "tempup"
 command "tempdown"
 command "fanspeed"	 
 command "setdefaults"      
+
+command "healthCheckNow"
+
+    // NOVOS atributos de saúde/conectividade
+    attribute "gw3Online", "ENUM", ONLINE_ENUM
+    attribute "lastHealthAt", "STRING"
+    attribute "healthLatencyMs", "NUMBER"
+
+    // NOVO: versão do GW3 (6 caracteres após "Version: ")
+    attribute "gw3Version", "STRING"            
       
   }      
 }
@@ -128,6 +140,10 @@ command "setdefaults"
 	    input name: "channel", title:"Canal Infravermelho (1/2 ou 3)", type: "string", required: true        
         input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false
 
+    // === NOVO: Health Check ===
+    input name: "enableHealthCheck", type: "bool",   title: "Ativar verificação de online (HTTP /info)", defaultValue: true
+    input name: "healthCheckMins",   type: "number", title: "Intervalo do health check (min)", defaultValue: 30, range: "1..1440"
+            
       
         //help guide
         input name: "UserGuide", type: "hidden", title: fmtHelpInfo("Manual do Driver") 
@@ -250,6 +266,7 @@ def createTemps() {
 def installed()
 {
 	log.warn "installed..."
+    sendEvent(name:"gw3Online", value:"unknown")    
 	off()
     initialize()
 
@@ -269,6 +286,7 @@ def updated()
 
 def initialize() {
 	log.debug "initialized()"  
+	if (enableHealthCheck) scheduleHealth()        
     sendEvent(name:"numberOfButtons", value:30)  		
 	if (state?.lastRunningMode == null) {
 		state.lastRunningMode = "auto"
@@ -1263,8 +1281,95 @@ def EnviaComando(button) {
 
 
 
+/* ======================= HEALTH CHECK HTTP (/info) ======================= */
+
+private void scheduleHealth() {
+  Integer mins = Math.max(1, (healthCheckMins ?: 5) as int)
+  unschedule("healthPoll")
+  // Primeiro dispara agora, depois agenda em minutos
+  runIn(2, "healthPoll")
+  runEveryXMinutes(mins, "healthPoll")
+}
+
+private void runEveryXMinutes(Integer mins, String handler) {
+  // Helper para intervalos arbitrários (Hubitat tem runEvery5/10/30, aqui simulamos)
+  // Reagenda com runIn a cada ciclo
+  state.healthEveryMins = mins
+  runIn( mins * 60, "healthReschedule" )
+}
+
+def healthReschedule() {
+  Integer mins = (state.healthEveryMins ?: (healthCheckMins ?: 5)) as int
+  runIn( mins * 60, "healthReschedule" )
+  healthPoll()
+}
+
+def healthPoll() {
+  if (!enableHealthCheck) return
+  String ip = (settings.molIPAddress ?: "").trim()
+  if (!ip) return
+  String uri = "http://${ip}/info"
+  Long started = now()
+  Map params = [ uri: uri, timeout: 5 ]
+  try {
+    asynchttpGet('healthPollCB', params, [t0: started, uri: uri])
+  } catch (e) {
+    if (logEnable) log.warn "healthPoll schedule failed: ${e.message}"
+  }
+}
+
+void healthPollCB(resp, data) {
+  String body = ""
+  Integer st = null
+  try {
+    st = resp?.status as Integer
+    body = resp?.getData() ?: ""
+  } catch (ignored) { }
+  String stamp = new Date().format("yyyy-MM-dd HH:mm:ss")
+  Long t0 = (data?.t0 ?: now())
+  Long dt = (now() - t0)
+
+  if (st && st >= 200 && st <= 299 && body?.toString()?.contains("MolSmart Device Info")) {
+    // Online
+    if (device.currentValue("gw3Online") != "online") sendEvent(name:"gw3Online", value:"online", isStateChange:true)
+    sendEvent(name:"healthLatencyMs", value: dt as Long)
+    sendEvent(name:"lastHealthAt", value: stamp)
+
+    // === NOVO: extrair "Version: X" e publicar 6 chars em gw3Version ===
+    try {
+      String txt = body?.toString() ?: ""
+      // procura linha iniciando com "Version:"
+      def m = (txt =~ /(?im)^\s*Version:\s*([^\r\n]+)/)
+      if (m.find()) {
+        String verFull = (m.group(1) ?: "").trim()
+        String ver6 = (verFull.length() >= 6) ? verFull.substring(0, 6) : verFull
+        if (ver6) {
+          sendEvent(name:"gw3Version", value: ver6, isStateChange:true)
+          if (logEnable) log.debug "Versão detectada: '${verFull}' -> gw3Version='${ver6}'"
+        }
+      } else if (logEnable) {
+        log.debug "Versão não encontrada no corpo do /info."
+      }
+    } catch (e) {
+      if (logEnable) log.warn "Falha ao extrair versão: ${e.message}"
+    }
+
+    if (logEnable) log.debug "Health OK in ${dt} ms"
+  } else {
+    // Offline
+    if (device.currentValue("gw3Online") != "offline") sendEvent(name:"gw3Online", value:"offline", isStateChange:true)
+    sendEvent(name:"healthLatencyMs", value: null)
+    sendEvent(name:"lastHealthAt", value: stamp)
+    if (logEnable) log.warn "Health FAIL (status=${st})"
+  }
+}
+
+def healthCheckNow() { healthPoll() }
 
 
+
+
+///////// HELPERS
 
 private getDescriptionText(msg) {
 	def descriptionText = "${device.displayName} ${msg}"
