@@ -20,7 +20,9 @@
  *              V.1.2   10/12/2024 - Fixed poweroff. 
  *              V.1.3   29/30/2025 - Fixed poweroff. 
  *              V.1.4   26/9/2025  - Changed to ASYNC Http method  
- *
+ *              V.1.5   29/10/2025  - Added child switches possibility to allow to operate via  switches. 
+ *									- Added healthcheck and online status check 
+*
  *
  *
  */
@@ -97,6 +99,7 @@ command "toolsIRsend"
 command "smarthubIRsend" 
 command "previouschannelIRsend" 
 command "backIRsend"	  
+    command "recreateButtons"
 		  
   }
       
@@ -136,6 +139,9 @@ command "backIRsend"
         input name: "UserGuide", type: "hidden", title: fmtHelpInfo("Manual do Driver") 
         input name: "SiteIR", type: "hidden", title: fmtHelpInfo1("Site IR MolSmart") 
         input name: "webserviceurl", title:"URL Do Controle Remoto", type: "string"
+    input name: "enableHealthCheck", type: "bool",   title: "Ativar verificação de online (HTTP /info)", defaultValue: true
+    input name: "healthCheckMins",   type: "number", title: "Intervalo do health check (min)", defaultValue: 30, range: "1..1440"
+    input name: "createButtonsOnSave", type: "bool", title: "Criar/atualizar Child Switches para botões ao salvar", defaultValue: true
 
   }   
   
@@ -242,12 +248,15 @@ def installed()
 
 def updated()
 { 
-    sendEvent(name:"numberOfButtons", value:60)    
+        if (!device.currentValue("gw3Online")) sendEvent(name:"gw3Online", value:"unknown")
+sendEvent(name:"numberOfButtons", value:52)    
     log.debug "updated()"
     AtualizaDadosGW3()  
 	if (logEnable) runIn(1800,logsOff)
     
 
+    if (createButtonsOnSave) createOrUpdateChildButtons(true)
+    if (enableHealthCheck) scheduleHealth()
 }
 
 //Get Device info and set as state to use during driver.
@@ -805,4 +814,196 @@ def logsOff() {
 }
 
 
+/* ======================= HEALTH CHECK (HTTP /info) ======================= */
 
+def scheduleHealth() {
+  Integer mins = Math.max(1, (healthCheckMins ?: 5) as int)
+  unschedule("healthPoll")
+  runIn(2, "healthPoll")                 // dispara logo
+  runEveryXMinutes(mins, "healthPoll")   // agenda recorrente
+}
+
+def healthCheckNow() { healthPoll() }
+
+def healthPoll() {
+  if (!enableHealthCheck) return
+  String ip = (settings.molIPAddress ?: "").trim()
+  if (!ip) return
+  String uri = "http://${ip}/info"
+  Long started = now()
+  Map params = [ uri: uri, timeout: 5 ]
+  try {
+    asynchttpGet('healthPollCB', params, [t0: started, uri: uri])
+  } catch (e) {
+    if (logEnable) log.warn "healthPoll schedule failed: ${e.message}"
+  }
+}
+
+void healthPollCB(resp, data) {
+  String body = ""
+  Integer st = null
+  try {
+    st = resp?.status as Integer
+    body = resp?.getData() ?: ""
+  } catch (ignored) { }
+  String stamp = new Date().format("yyyy-MM-dd HH:mm:ss")
+  Long t0 = (data?.t0 ?: now())
+  Long dt = (now() - t0)
+
+  if (st && st >= 200 && st <= 299 && (body?.toString()?.contains("MolSmart Device Info") || body?.toString()?.contains("Version:"))) {
+    if (device.currentValue("gw3Online") != "online") sendEvent(name:"gw3Online", value:"online", isStateChange:true)
+    sendEvent(name:"healthLatencyMs", value: dt as Long)
+    sendEvent(name:"lastHealthAt", value: stamp)
+
+    // Extrair "Version: X" e publicar 6 chars em gw3Version
+    try {
+      String txt = body?.toString() ?: ""
+      def m = (txt =~ /(?im)^\s*Version:\s*([^\r\n]+)/)
+      if (m.find()) {
+        String verFull = (m.group(1) ?: "").trim()
+        String ver6 = (verFull.length() >= 6) ? verFull.substring(0, 6) : verFull
+        if (ver6) {
+          sendEvent(name:"gw3Version", value: ver6, isStateChange:true)
+          if (logEnable) log.debug "Versão detectada: '${verFull}' -> gw3Version='${ver6}'"
+        }
+      } else if (logEnable) {
+        log.debug "Versão não encontrada no corpo do /info."
+      }
+    } catch (e) {
+      if (logEnable) log.warn "Falha ao extrair versão: ${e.message}"
+    }
+
+    if (logEnable) log.debug "Health OK in ${dt} ms"
+  } else {
+    if (device.currentValue("gw3Online") != "offline") sendEvent(name:"gw3Online", value:"offline", isStateChange:true)
+    sendEvent(name:"healthLatencyMs", value: null)
+    sendEvent(name:"lastHealthAt", value: stamp)
+    if (logEnable) log.warn "Health FAIL (status=${st})"
+  }
+}
+
+
+/* ======================= CHILD SWITCHES (Botões como Switch momentâneo) ======================= */
+
+import groovy.transform.Field
+
+@Field static final List<Map> TV_CHILD_BUTTON_DEFS = [
+  [label:"TV - Power On",            handler:"poweron"],
+  [label:"TV - Power Off",           handler:"poweroff"],
+  [label:"TV - Mute",                handler:"mute"],
+  [label:"TV - Source",              handler:"source"],
+  [label:"TV - Back",                handler:"back"],
+  [label:"TV - Menu",                handler:"menu"],
+  [label:"TV - HDMI 1",              handler:"hdmi1"],
+  [label:"TV - HDMI 2",              handler:"hdmi2"],
+  [label:"TV - Left",                handler:"left"],
+  [label:"TV - Right",               handler:"right"],
+  [label:"TV - Up",                  handler:"up"],
+  [label:"TV - Down",                handler:"down"],
+  [label:"TV - OK/Confirm",          handler:"confirm"],
+  [label:"TV - Exit",                handler:"exit"],
+  [label:"TV - Home",                handler:"home"],
+  [label:"TV - Channel Up",          handler:"channelUp"],
+  [label:"TV - Channel Down",        handler:"channelDown"],
+  [label:"TV - Volume Up",           handler:"volumeUp"],
+  [label:"TV - Volume Down",         handler:"volumeDown"],
+  [label:"TV - 0",                   handler:"num0"],
+  [label:"TV - 1",                   handler:"num1"],
+  [label:"TV - 2",                   handler:"num2"],
+  [label:"TV - 3",                   handler:"num3"],
+  [label:"TV - 4",                   handler:"num4"],
+  [label:"TV - 5",                   handler:"num5"],
+  [label:"TV - 6",                   handler:"num6"],
+  [label:"TV - 7",                   handler:"num7"],
+  [label:"TV - 8",                   handler:"num8"],
+  [label:"TV - 9",                   handler:"num9"],
+  [label:"TV - Amazon Prime",        handler:"appAmazonPrime"],
+  [label:"TV - YouTube",             handler:"appyoutube"],
+  [label:"TV - Netflix",             handler:"appnetflix"],
+  [label:"TV - Extra 1",             handler:"btnextra1"],
+  [label:"TV - Extra 2",             handler:"btnextra2"],
+  [label:"TV - Extra 3",             handler:"btnextra3"],
+  [label:"TV - Extra 4",             handler:"btnextra4"],
+  [label:"TV - Extra 5",             handler:"btnextra5"],
+  [label:"TV - Extra 6",             handler:"btnextra6"],
+  [label:"TV - Extra 7",             handler:"btnextra7"],
+  [label:"TV - A IR",                handler:"btnAIRsend"],
+  [label:"TV - B IR",                handler:"btnBIRsend"],
+  [label:"TV - C IR",                handler:"btnCIRsend"],
+  [label:"TV - D IR",                handler:"btnDIRsend"],
+  [label:"TV - Play",                handler:"playIRsend"],
+  [label:"TV - Pause",               handler:"pauseIRsend"],
+  [label:"TV - Next",                handler:"nextIRsend"],
+  [label:"TV - Guide",               handler:"guideIRsend"],
+  [label:"TV - Info",                handler:"infoIRsend"],
+  [label:"TV - Tools",               handler:"toolsIRsend"],
+  [label:"TV - SmartHub",            handler:"smarthubIRsend"],
+  [label:"TV - Previous Channel",    handler:"previouschannelIRsend"],
+  [label:"TV - Back (IR)",           handler:"backIRsend"]
+]
+
+command "recreateButtons"
+
+def recreateButtons() { createOrUpdateChildButtons(true) }
+
+private void createOrUpdateChildButtons(Boolean removeExtras=false) {
+  try { if (logEnable) log.debug "Criando/atualizando Child Switches para botões da TV..." } catch (ignored) { }
+
+  // cria childs somente para handlers existentes
+  Set<String> methodNames = this.metaClass.methods*.name as Set
+  List<Map> defs = TV_CHILD_BUTTON_DEFS.findAll { it.handler in methodNames }
+
+  Set<String> keep = [] as Set
+  defs.eachWithIndex { m, idx ->
+    String dni = "${device.id}-TVBTN-${idx+1}"
+    def child = getChildDevice(dni)
+    String label = m.label as String
+    if (!child) {
+      try {
+        child = addChildDevice("hubitat", "Generic Component Switch", dni,
+          [name: label, label: label, isComponent: true])
+      } catch (e) {
+        log.warn "Falha ao criar child '${label}': ${e.message}"
+      }
+    } else {
+      try { if (child.label != label) child.setLabel(label) } catch (ignored) { }
+    }
+    if (child) {
+      try {
+        child.updateDataValue("handler", (m.handler as String))
+        child.parse([[name:"switch", value:"off"]])
+      } catch (ignored) { }
+      keep << dni
+    }
+  }
+
+  if (removeExtras) {
+    childDevices?.findAll { !(it.deviceNetworkId in keep) }?.each {
+      try { deleteChildDevice(it.deviceNetworkId) } catch (ignored) { }
+    }
+  }
+}
+
+// Component callbacks (Generic Component Switch)
+def componentOn(cd)  { handleChildPress(cd) }
+def componentOff(cd) { /* momentary: ignorar */ }
+
+private void handleChildPress(cd) {
+  String handler = cd?.getDataValue("handler") ?: ""
+  if (!handler) { log.warn "Child ${cd?.displayName} sem handler definido."; return }
+  try {
+    this."${handler}"()
+  } catch (MissingMethodException e) {
+    log.warn "Método '${handler}' não encontrado. Verifique nomes dos handlers."
+  } catch (e) {
+    log.warn "Falha ao executar handler '${handler}': ${e.message}"
+  }
+  runIn(1, "childOffSafe", [data:[dni: cd?.deviceNetworkId]])
+}
+
+def childOffSafe(data) {
+  def child = getChildDevice(data?.dni as String)
+  if (child) {
+    try { child.parse([[name:"switch", value:"off"]]) } catch (ignored) { }
+  }
+}
