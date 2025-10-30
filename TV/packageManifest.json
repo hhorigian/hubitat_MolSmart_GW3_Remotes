@@ -1,10 +1,10 @@
 {
    "packageName":"MolSmart - GW3 - TV (irweb)",
    "author":"VH",
-   "version":"1.4",
+   "version":"1.5",
    "minimumHEVersion":"2.3.7.100",
-   "dateReleased":"2025-12-10",
-   "releaseNotes":"Fixed poweroff button",
+   "dateReleased":"2025-29-10",
+   "releaseNotes":"Added child switches possibility to allow to operate via  switches. n",
    "documentationLink":"https://github.com/hhorigian/hubitat_MolSmart_GW3_Remotes",
    "drivers": [
     {
