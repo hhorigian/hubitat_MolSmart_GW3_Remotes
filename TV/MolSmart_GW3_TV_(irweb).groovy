@@ -946,12 +946,13 @@ command "recreateButtons"
 
 def recreateButtons() { createOrUpdateChildButtons(true) }
 
+
 private void createOrUpdateChildButtons(Boolean removeExtras=false) {
   try { if (logEnable) log.debug "Criando/atualizando Child Switches para botões da TV..." } catch (ignored) { }
 
-  // cria childs somente para handlers existentes
-  Set<String> methodNames = this.metaClass.methods*.name as Set
-  List<Map> defs = TV_CHILD_BUTTON_DEFS.findAll { it.handler in methodNames }
+  // Sempre cria todos os childs definidos na lista (handlers inexistentes serão tratados ao acionar)
+  List<Map> defs = TV_CHILD_BUTTON_DEFS
+  if (logEnable) log.debug "Total de childs previstos: ${defs?.size()}"
 
   Set<String> keep = [] as Set
   defs.eachWithIndex { m, idx ->
@@ -962,6 +963,7 @@ private void createOrUpdateChildButtons(Boolean removeExtras=false) {
       try {
         child = addChildDevice("hubitat", "Generic Component Switch", dni,
           [name: label, label: label, isComponent: true])
+        if (logEnable) log.debug "Child criado: ${label} (${dni})"
       } catch (e) {
         log.warn "Falha ao criar child '${label}': ${e.message}"
       }
@@ -983,6 +985,7 @@ private void createOrUpdateChildButtons(Boolean removeExtras=false) {
     }
   }
 }
+
 
 // Component callbacks (Generic Component Switch)
 def componentOn(cd)  { handleChildPress(cd) }
