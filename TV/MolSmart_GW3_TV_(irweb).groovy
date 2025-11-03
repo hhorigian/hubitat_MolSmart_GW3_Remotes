@@ -100,7 +100,10 @@ command "toolsIRsend"
 command "smarthubIRsend" 
 command "previouschannelIRsend" 
 command "backIRsend"	  
-    command "recreateButtons"
+command "recreateButtons"
+command "removeButtons"
+	  
+	  
 		  
   }
       
@@ -944,6 +947,22 @@ import groovy.transform.Field
 ]
 
 command "recreateButtons"
+
+
+def removeButtons() {
+  try { if (logEnable) log.warn "Removendo todos os Child Switches de botões..." } catch (ignored) { }
+  def toRemove = childDevices?.findAll { (it.deviceNetworkId ?: "").startsWith("${device.id}-TVBTN-") } ?: []
+  Integer removed = 0
+  toRemove.each { cd ->
+    try {
+      deleteChildDevice(cd.deviceNetworkId)
+      removed++
+    } catch (e) {
+      log.warn "Falha ao remover child '${cd.displayName}': ${e.message}"
+    }
+  }
+  if (logEnable) log.warn "Remoção concluída. Total removido: ${removed}"
+}
 
 def recreateButtons() { createOrUpdateChildButtons(true) }
 
