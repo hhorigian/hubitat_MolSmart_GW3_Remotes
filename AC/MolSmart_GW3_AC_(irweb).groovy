@@ -59,7 +59,8 @@ command "setSupportedThermostatFanModes", ["JSON_OBJECT"]
 command "setSupportedThermostatModes", ["JSON_OBJECT"]
 command "setTemperature", ["NUMBER"]   
       
-      
+command "stop"
+command "on"
 command "poweroff"
 command "poweron"
 command "auto"
@@ -1278,6 +1279,25 @@ def EnviaComando(button) {
     }
 }
 
+
+void gw3PostCallback(resp, data) {
+    String cmd = data?.cmd
+    try {
+        if (resp?.status in 200..299) {
+            logDebug "POST OK (async) cmd=${cmd} status=${resp?.status}"
+             state.ultimamensagem =  "Resposta OK"
+
+        } else {
+            logWarn "POST error (async) status=${resp?.status} cmd=${cmd}"
+            state.ultimamensagem =  "Erro no envio do comando"
+            
+        }
+    } catch (e) {
+        logWarn "Async callback exception: ${e.message} (cmd=${cmd})"
+        state.errormessage = e.message
+        
+    }
+}
 
 
 
